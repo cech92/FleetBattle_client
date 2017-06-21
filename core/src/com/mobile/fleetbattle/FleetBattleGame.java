@@ -17,6 +17,8 @@ public class FleetBattleGame extends ApplicationAdapter {
 	private Texture incrImage;
 	private Texture torpImage;
 	private Texture subImage;
+	private Texture gridImage;
+
 
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
@@ -36,9 +38,10 @@ public class FleetBattleGame extends ApplicationAdapter {
 		incrImage = new Texture(Gdx.files.internal("incr.png"));
 		torpImage = new Texture(Gdx.files.internal("torp.png"));
 		subImage = new Texture(Gdx.files.internal("sub.png"));
+		gridImage = new Texture(Gdx.files.internal("grid.png"));
 
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 800, 800);
+		camera.setToOrtho(false, 920, 1120);
 		touchPos = new Vector3();
 
 		batch = new SpriteBatch();
@@ -47,8 +50,8 @@ public class FleetBattleGame extends ApplicationAdapter {
 		ships = new Array<Rectangle>();
 		for (int i = 0; i < 4; i++) {
 			Rectangle aux = new Rectangle();
-			aux.x = 200;
-			aux.y = 80*i;
+			aux.x = 240;
+			aux.y = 80 + 80*i;
 			aux.width = 80;
 			aux.height = 80;
 			ships.add(aux);
@@ -56,7 +59,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 		for (int i = 0; i < 3; i++) {
 			Rectangle aux = new Rectangle();
 			aux.x = 320;
-			aux.y = 80*i;
+			aux.y = 80 + 80*i;
 			aux.width = 160;
 			aux.height = 80;
 			ships.add(aux);
@@ -64,7 +67,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 		for (int i = 0; i < 2; i++) {
 			Rectangle aux = new Rectangle();
 			aux.x = 480;
-			aux.y = 80*i;
+			aux.y = 80 + 80*i;
 			aux.width = 240;
 			aux.height = 80;
 			ships.add(aux);
@@ -72,7 +75,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 		for (int i = 0; i < 1; i++) {
 			Rectangle aux = new Rectangle();
 			aux.x = 80;
-			aux.y = 480;
+			aux.y = 560;
 			aux.width = 320;
 			aux.height = 80;
 			ships.add(aux);
@@ -90,6 +93,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
+		batch.draw(gridImage, 0, 0);
 		for (Rectangle sub:ships) {
 			switch ((int)sub.width){
 				case 80 : batch.draw(subImage, sub.x, sub.y); break;
@@ -106,8 +110,14 @@ public class FleetBattleGame extends ApplicationAdapter {
 
 
 			if(locked){
-				ships.get(activeSub).x = touchPos.x - (touchPos.x%80);
-				ships.get(activeSub).y = touchPos.y - (touchPos.y%80);
+				float newX = touchPos.x - (touchPos.x%80);
+				float newY = touchPos.y - (touchPos.y%80) ;
+				if(newX<80) newX=80;
+				if(newX>800) newX=800;
+				if(newY<80) newY=80;
+				if(newY>800) newY=800;
+				ships.get(activeSub).x = newX;
+				ships.get(activeSub).y = newY;
 			}else {
 				int index = -1;
 				for (Rectangle sub : ships
