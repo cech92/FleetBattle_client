@@ -18,7 +18,9 @@ public class FleetBattleGame extends ApplicationAdapter {
 	private Texture torpImage;
 	private Texture subImage;
 	private Texture gridImage;
-
+	private Texture portaImageRot;
+	private Texture incrImageRot;
+	private Texture torpImageRot;
 
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
@@ -28,6 +30,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 
 
 	private boolean locked = false;
+	private int lockedTime = 0;
 	private int activeSub = 0;
 
 	@Override
@@ -39,6 +42,9 @@ public class FleetBattleGame extends ApplicationAdapter {
 		torpImage = new Texture(Gdx.files.internal("torp.png"));
 		subImage = new Texture(Gdx.files.internal("sub.png"));
 		gridImage = new Texture(Gdx.files.internal("grid.png"));
+		portaImageRot = new Texture(Gdx.files.internal("portarot.png"));
+		incrImageRot = new Texture(Gdx.files.internal("incrrot.png"));
+		torpImageRot = new Texture(Gdx.files.internal("torprot.png"));
 
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, 920, 1120);
@@ -46,7 +52,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 
 		batch = new SpriteBatch();
 
-		//ships default position
+		//ships default positions
 		ships = new Array<Rectangle>();
 		for (int i = 0; i < 4; i++) {
 			Rectangle aux = new Rectangle();
@@ -96,7 +102,12 @@ public class FleetBattleGame extends ApplicationAdapter {
 		batch.draw(gridImage, 0, 0);
 		for (Rectangle sub:ships) {
 			switch ((int)sub.width){
-				case 80 : batch.draw(subImage, sub.x, sub.y); break;
+				case 80 : switch ((int) sub.height){
+					case 80 : batch.draw(subImage, sub.x, sub.y); break;
+					case 160 : batch.draw(torpImageRot, sub.x, sub.y); break;
+					case 240 : batch.draw(incrImageRot, sub.x, sub.y); break;
+					case 320 : batch.draw(portaImageRot, sub.x, sub.y); break;
+				}  break;
 				case 160 : 	batch.draw(torpImage, sub.x, sub.y); break;
 				case 240 : 	batch.draw(incrImage, sub.x, sub.y); break;
 				case 320 : 	batch.draw(portaImage, sub.x, sub.y); break;
@@ -108,8 +119,10 @@ public class FleetBattleGame extends ApplicationAdapter {
 			touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
 			camera.unproject(touchPos);
 
+			lockedTime++;
 
-			if(locked){
+			if(locked){ //if was already clicking on a ship (i.e I'm dragging a ship)
+				//the new position should be inside the grid, and in one square (80px steps)
 				float newX = touchPos.x - (touchPos.x%80);
 				float newY = touchPos.y - (touchPos.y%80) ;
 				if(newX<80) newX=80;
@@ -118,13 +131,15 @@ public class FleetBattleGame extends ApplicationAdapter {
 				if(newY>800) newY=800;
 				ships.get(activeSub).x = newX;
 				ships.get(activeSub).y = newY;
-			}else {
+			}else { // if I was not clicking on a ship
+				//check if I tap on a ship
 				int index = -1;
 				for (Rectangle sub : ships
 						) {
 					index++;
 					if (sub.x < touchPos.x & touchPos.x < (sub.x + sub.width)
 							& sub.y < touchPos.y & touchPos.y < (sub.y + sub.height)) {
+						//if i click inside the margins of a ship, that ship is the active one
 						locked = true;
 						activeSub = index;
 					}
@@ -133,7 +148,14 @@ public class FleetBattleGame extends ApplicationAdapter {
 			}
 
 		}else{
+			if(locked & lockedTime<9){	// 9 frames in 60fps: 150 milliseconds (one tap)
+				//rotate ship
+				float aux = ships.get(activeSub).width;
+				ships.get(activeSub).width=ships.get(activeSub).height;
+				ships.get(activeSub).height=aux;
+			}
 			locked=false;
+			lockedTime=0;
 		}
 
 	}
