@@ -18,7 +18,12 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 
+import com.mobile.fleetbattle.Adversary;
+
+import static java.lang.Math.abs;
+
 public class FleetBattleGame extends ApplicationAdapter {
+	private Adversary enemy;
 	private Texture fireImage;
 	private Texture waterImage;
 	private Texture portaImage;
@@ -37,20 +42,38 @@ public class FleetBattleGame extends ApplicationAdapter {
 	private Stage stage;
 
 	private Array<Rectangle> ships;
+	private Array<Rectangle> misses;
+	private Array<Rectangle> hits;
 
 
 	private boolean locked = false;
 	private int lockedTime = 0;
 	private int activeSub = 0;
+	private boolean ready=true;
 
 	private int[][] disposizione;
 	private boolean disposto= false;
+	private boolean[][] avversarioToccato;
+
+
+	private class Coord{
+		int x;
+		int y;
+		public Coord(int a, int b){
+			x=a; y=b;
+		}
+	}
+
+	public FleetBattleGame(com.mobile.fleetbattle.Adversary en){
+		enemy = en;
+	}
 
 	@Override
 	public void create () {
 		skin = new Skin(Gdx.files.internal("uiskin.json"));
 
 		disposizione = new int[10][10];
+		avversarioToccato = new boolean[10][10];
 
 		fireImage = new Texture(Gdx.files.internal("fire.png"));
 		waterImage = new Texture(Gdx.files.internal("water.png"));
@@ -71,6 +94,9 @@ public class FleetBattleGame extends ApplicationAdapter {
 		StretchViewport viewp = new StretchViewport(920, 1120, camera);
 		stage = new Stage(viewp,batch);
 
+
+		misses = new Array<Rectangle>();
+		hits = new Array<Rectangle>();
 		//ships default positions
 		ships = new Array<Rectangle>();
 		for (int i = 0; i < 4; i++) {
@@ -138,7 +164,63 @@ public class FleetBattleGame extends ApplicationAdapter {
 		camera.update();
 
 		if(disposto){
-			stage.draw();
+			if(camera.position.x < 920 + camera.viewportWidth/2){
+				camera.translate(+40, 0, 0);
+			}
+			camera.update();
+			batch.setProjectionMatrix(camera.combined);
+			batch.begin();
+			batch.draw(gridImage, 0, 0);
+			batch.draw(gridImage, 920, 0);
+			for (Rectangle miss:misses) {
+				batch.draw(waterImage, miss.x, miss.y);
+			}
+			for (Rectangle hit:hits) {
+				batch.draw(fireImage, hit.x, hit.y);
+			}
+			for (Rectangle sub:ships) {
+				switch ((int)sub.width){
+					case 80 : switch ((int) sub.height){
+						case 80 : batch.draw(subImage, sub.x, sub.y); break;
+						case 160 : batch.draw(torpImageRot, sub.x, sub.y); break;
+						case 240 : batch.draw(incrImageRot, sub.x, sub.y); break;
+						case 320 : batch.draw(portaImageRot, sub.x, sub.y); break;
+					}  break;
+					case 160 : 	batch.draw(torpImage, sub.x, sub.y); break;
+					case 240 : 	batch.draw(incrImage, sub.x, sub.y); break;
+					case 320 : 	batch.draw(portaImage, sub.x, sub.y); break;
+				}
+			}
+			batch.end();
+
+			if(ready & Gdx.input.isTouched()) {
+				ready=false;
+				touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+				camera.unproject(touchPos);
+
+				if(1000<touchPos.x& touchPos.x<1800 & 80<touchPos.y & touchPos.y<880) {
+					Coord co = convertiCoordinate(touchPos.x, touchPos.y);
+
+					//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
+					if (!avversarioToccato[co.y][co.x]) {
+						avversarioToccato[co.y][co.x]=true;
+						if(enemy.hit(co.y, co.x)){
+							hits.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
+							Ship hitShip = enemy.destroyed(co.y,co.x);
+							if(hitShip.size!=0){
+								ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
+								if(enemy.lost()){
+									hits.add(new Rectangle(920,920,80,80));
+								}
+							}
+						}else {
+							misses.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
+						}
+					}
+				}
+				ready=true;
+			}
+
 		}else{
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
@@ -268,10 +350,10 @@ public class FleetBattleGame extends ApplicationAdapter {
 			}
 
 		}
-		String disp="";
+		/*String disp="";
 		for (int j = 9; j > -1; j--) {
 			for (int k = 0; k < 10; k++) {
-				disp += disposizione[j][k] + " ";
+				disp += disposizione[j][k] + "\t";
 			}
 			disp += "\n";
 		}
@@ -281,6 +363,11 @@ public class FleetBattleGame extends ApplicationAdapter {
 		matrice.setPosition(80, 400);
 		stage.clear();
 		stage.addActor(matrice);
-		Gdx.input.setInputProcessor(stage);
+		Gdx.input.setInputProcessor(stage);*/
+	}
+
+	private Coord convertiCoordinate(float x, float y){
+		if (x>920) x=x-920;
+		return new Coord(((int)x-80)/80, ((int)y-80)/80);
 	}
 }

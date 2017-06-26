@@ -14,8 +14,11 @@ import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
 public class GameFragment extends AndroidFragmentApplication {
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-    {  return initializeForView(new FleetBattleGame());   }
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
+        Adversary enemy = new FooAdversary();
+        return initializeForView(new FleetBattleGame(enemy));
+    }
 
 
 }
