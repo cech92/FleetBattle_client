@@ -18,7 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 
-import com.mobile.fleetbattle.Adversary;
+import java.util.concurrent.Future;
 
 import static java.lang.Math.abs;
 
@@ -49,7 +49,12 @@ public class FleetBattleGame extends ApplicationAdapter {
 	private boolean locked = false;
 	private int lockedTime = 0;
 	private int activeSub = 0;
+
+	//state variables
 	private boolean ready=true;
+	private boolean endMyTurn=false;
+	private boolean startMyTurn=true;
+	private boolean enemyTurn=false;
 
 	private int[][] disposizione;
 	private boolean disposto= false;
@@ -143,7 +148,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 			public void clicked(InputEvent event, float x, float y){
 				int errori = controllaErrori();
 				switch (errori){
-					case 0 : scriviMatrice(); disposto=true; break;
+					case 0 : computeMatrix(); disposto=true; break;
 					case 1 : button.setText("Navi fuori dai bordi!"); break;
 					case 2 : button.setText("Navi sovrapposte"); break;
 					case 3 : button.setText("Navi sovrapposte e fuori dai bordi"); break;
@@ -164,10 +169,56 @@ public class FleetBattleGame extends ApplicationAdapter {
 		camera.update();
 
 		if(disposto){
-			if(camera.position.x < 920 + camera.viewportWidth/2){
-				camera.translate(+40, 0, 0);
+			if(enemyTurn){
+				Future<Ship> futAttack = enemy.getAttack();
+				Ship attack;
+				while (!futAttack.isDone()) {
+					//ask to wait
+				}
+				try{
+					attack = futAttack.get();
+				}catch (Exception ex){attack= new Ship(0,0,0,0);}
+				int x = attack.x;
+				int y = attack.y;
+				boolean hit = hit(y,x);
+				boolean lost = lost();
+				Results res = new Results(hit,sank(y,x),lost);
+				enemy.giveResults(res);
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				if(hit){
+					hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
+					if(lost){
+						misses.add(new Rectangle(160 , 980 + 80, 80, 80));
+					}
+				}else{
+					misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
+					enemyTurn=false;
+					startMyTurn=true;
+				}
+
 			}
-			camera.update();
+			if(startMyTurn) {
+				if (camera.position.x < 920 + camera.viewportWidth / 2) {
+					camera.translate(+40, 0, 0);
+				}else{
+					startMyTurn=false;
+					ready=true;
+				}
+				camera.update();
+			}
+			if(endMyTurn) {
+				if (camera.position.x >  camera.viewportWidth / 2) {
+					camera.translate(-40, 0, 0);
+				}else{
+					endMyTurn=false;
+					enemyTurn=true;
+				}
+				camera.update();
+			}
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
 			batch.draw(gridImage, 0, 0);
@@ -204,21 +255,30 @@ public class FleetBattleGame extends ApplicationAdapter {
 					//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
 					if (!avversarioToccato[co.y][co.x]) {
 						avversarioToccato[co.y][co.x]=true;
-						if(enemy.hit(co.y, co.x)){
+						Future<Results> futRes = enemy.attack(co.y,co.x);
+						Results res;
+						while (!futRes.isDone()) {
+							//ask to wait
+						}
+						try{
+							res = futRes.get();
+						}catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);};
+						if(res.hit){
 							hits.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
-							Ship hitShip = enemy.destroyed(co.y,co.x);
+							Ship hitShip = res.sank;
 							if(hitShip.size!=0){
 								ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
-								if(enemy.lost()){
+								if(res.lost){
 									hits.add(new Rectangle(920,920,80,80));
 								}
 							}
+							ready=true;
 						}else {
 							misses.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
+							endMyTurn=true;
 						}
 					}
 				}
-				ready=true;
 			}
 
 		}else{
@@ -332,7 +392,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 		return fuori + sovra*2;
 	}
 
-	private void scriviMatrice(){
+	private void computeMatrix(){
 		int i =0;
 		for (Rectangle sub: ships
 			 ) {
@@ -350,24 +410,69 @@ public class FleetBattleGame extends ApplicationAdapter {
 			}
 
 		}
-		/*String disp="";
-		for (int j = 9; j > -1; j--) {
-			for (int k = 0; k < 10; k++) {
-				disp += disposizione[j][k] + "\t";
-			}
-			disp += "\n";
-		}
-		final TextArea matrice = new TextArea(disp,skin);
-		matrice.setWidth(400);
-		matrice.setHeight(400);
-		matrice.setPosition(80, 400);
-		stage.clear();
-		stage.addActor(matrice);
-		Gdx.input.setInputProcessor(stage);*/
+		
 	}
 
 	private Coord convertiCoordinate(float x, float y){
 		if (x>920) x=x-920;
 		return new Coord(((int)x-80)/80, ((int)y-80)/80);
+	}
+
+	private boolean hit(int y, int x){
+		if(disposizione[y][x]!=0 && disposizione[y][x]<100) {
+			disposizione[y][x]+=100;
+			return true;
+		}
+		return false;
+	}
+
+	public Ship sank(int a, int b){
+		int y=a;
+		int x=b;
+		int num = disposizione[y][x];
+		int up = 0;
+		int size= 0;
+		if (num<101) {
+			return new Ship(0, 0, 0, 0);
+		}else{
+			for (int i = 0; i < 10; i++) { // i is the y coordinate
+				for (int j = 0; j < 10; j++) { // j is the x coordinate
+					if(disposizione[i][j]==num-100){
+						return new Ship(0, 0, 0, 0);
+					}
+					if(disposizione[i][j]==num){
+						size++; //valid only if ship sank
+					}
+				}
+			}
+		}
+		if(y<9){
+			if(num==disposizione[y+1][x]){
+				up=1;
+			}
+		}
+		if(y>0){
+			while(y>0 && num==disposizione[y-1][x]){
+				--y;
+				up=1;
+			}
+		}
+		if(x>0){
+			while(x>0 && num==disposizione[y][x-1]){
+				--x;
+			}
+		}
+		return new Ship(y, x, size, up);
+	}
+
+	private boolean lost(){
+		for (int i = 0; i < 10; i++) {
+			for (int j = 0; j < 10; j++) {
+				if(disposizione[i][j]>0 & disposizione[i][j]<100){
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 }
