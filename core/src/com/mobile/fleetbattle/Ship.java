@@ -2,9 +2,12 @@ package com.mobile.fleetbattle;
 
 /**
  * Created by Facoch on 26/06/17.
+ * Utility class to store game coordinates (0-9, 0-9) as well as a ship size (1-4, 0 if only
+ * coordinates are used or to mean no ship) and if the ship is facing up. This is an integer to
+ * simplify graphic computation of the heigth and length of a ship.
  */
 
-public class Ship {
+class Ship {
     //coordinates
     int y;
     int x;
@@ -12,7 +15,7 @@ public class Ship {
     int size;
     //1 if facing up, 0 if facing right.
     int up= 0;
-    public Ship(int a, int b, int c, int dir) {
+    Ship(int a, int b, int c, int dir) {
         y=a; x=b; size=c; up=dir;
     }
 }

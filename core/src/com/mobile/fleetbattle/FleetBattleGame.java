@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.ui.TextArea;
 import com.badlogic.gdx.utils.Array;
 
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -23,7 +22,7 @@ import java.util.concurrent.Future;
 
 import static java.lang.Math.abs;
 
-public class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
+class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private Adversary enemy;
 
 	private Texture targetImage;
@@ -41,7 +40,6 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
 	private Vector3 touchPos;
-	private Skin skin;
 	private Stage stage;
 
 	private Array<Rectangle> ships;
@@ -57,23 +55,36 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 	private int lockedTime = 0;
 	private int activeSub = 0;
 
-	//state variables
-	private boolean animateTarget=false;
-	private boolean ready=true;
-	private boolean endMyTurn=false;
-	private boolean startMyTurn=true;
-	private boolean enemyTurn=false;
-	private boolean newElement=false;
-	private boolean attackSet=false;
-	private boolean enemyAttackSet=false;
-	private	boolean secondHit=false;
+	//state variable
+	private int state=0;
+	/*
+	* State 0: Not disposed yet. When disposed go to state 12
+	* -- Player turn --
+	* state 1: wait for user attack
+	* state 2: animating attack
+	* state 3: wait for enemy response
+	* state 4: hit -> animate and return to state 1 (or goto 13 if won)
+	* state 5: miss -> animate
+	* state 6: end turn, animate screen scroll
+	* -- Enemy turn --
+	* state 7: wait for enemy attack
+	* state 8: animate attack
+	* state 9: send response
+	* state 10: hit -> animate and return to state 7 (or goto 14 id lost)
+	* state 11: miss -> animate
+	* state 12: start turn, animate screen scroll, return to state 1
+	*
+	* state 13: Player has won
+	* state 14: Player has lost
+	*/
+
 
 	private int wait=0;
+	@SuppressWarnings("FieldCanBeLocal")
 	private final int waitingTime=60; //60 frames = 1 sec
-
+	private	boolean secondHit=false;
 
 	private int[][] disposizione;
-	private boolean disposto= false;
 	private boolean[][] avversarioToccato;
 
 
@@ -81,18 +92,18 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 	private class Coord{
 		int x;
 		int y;
-		public Coord(int a, int b){
+		Coord(int a, int b){
 			x=a; y=b;
 		}
 	}
 
-	public FleetBattleGame(com.mobile.fleetbattle.Adversary en){
+	FleetBattleGame(com.mobile.fleetbattle.Adversary en){
 		enemy = en;
 	}
 
 	@Override
 	public void create () {
-		skin = new Skin(Gdx.files.internal("uiskin.json"));
+		Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
 		disposizione = new int[10][10];
 		avversarioToccato = new boolean[10][10];
@@ -166,7 +177,7 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 			public void clicked(InputEvent event, float x, float y){
 				int errori = controllaErrori();
 				switch (errori){
-					case 0 : computeMatrix(); disposto=true; break;
+					case 0 : computeMatrix(); state=12; break;
 					case 1 : button.setText("Navi fuori dai bordi!"); break;
 					case 2 : button.setText("Navi sovrapposte"); break;
 					case 3 : button.setText("Navi sovrapposte e fuori dai bordi"); break;
@@ -185,9 +196,9 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 
 		camera.update();
 
-		if(disposto){
+		if(state>0){
 			//enemy's turn
-			if(enemyTurn && !enemyAttackSet && !newElement && !animateTarget){
+			if(state==7){
 				if(secondHit && wait<waitingTime/2){
 					wait++;
 				}else {
@@ -202,13 +213,12 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 						attack = new Ship(0, 0, 0, 0);
 					}
 					wait=0;
-					enemyAttackSet = true;
-					animateTarget = true;
+					state=8;
 					targetCo = new Coord(attack.x, attack.y);
 				}
 
 			}
-			if(!animateTarget && enemyAttackSet) {
+			if(state==9) {
 				int x = targetCo.x;
 				int y = targetCo.y;
 				boolean hit = hit(y,x);
@@ -222,19 +232,16 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 					if(lost){
 						misses.add(new Rectangle(160 , 980 + 80, 80, 80));
 					}
+					state=10;
 				}else{
 					secondHit=false;
 					misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
-					enemyTurn=false;
-					startMyTurn=true;
+					state=11;
 				}
-				newElement = true;
-				animateTarget = true;
-				enemyAttackSet = false;
 
 			}
 			// Transitions between turns
-			if(startMyTurn && !newElement ) {
+			if(state==12) {
 				if(wait<waitingTime){
 					wait=wait+1;
 				}else {
@@ -242,13 +249,12 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 						camera.translate(+40, 0, 0);
 					} else {
 						wait=0;
-						startMyTurn = false;
-						ready = true;
+						state=1;
 					}
 					camera.update();
 				}
 			}
-			if(endMyTurn && !newElement) {
+			if(state==6) {
 				if(wait<waitingTime){
 					wait=wait+1;
 				}else {
@@ -256,8 +262,7 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 						camera.translate(-40, 0, 0);
 					} else {
 						wait=0;
-						endMyTurn = false;
-						enemyTurn = true;
+						state=7;
 					}
 					camera.update();
 				}
@@ -293,11 +298,11 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 			}
 			batch.end();
 
-			if(animateTarget && (attackSet || enemyAttackSet) ){
+			if(state==2||state==8){
 				if(!targetShown){
-					if(attackSet){
+					if(state==2){
 						target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-					}else {
+					}else{ //state==8
 						target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
 					}
 					targetShown=true;
@@ -308,10 +313,10 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 					target.width=target.width-160;
 					target.height=target.height-160;
 				}else{
-					animateTarget=false;
+					state=state+1;
 				}
 			}
-			if(!animateTarget && attackSet){
+			if(state==3){
 				Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
 				Results res;
 				while (!futRes.isDone()) {
@@ -330,16 +335,13 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 							hits.add(new Rectangle(920,920,80,80));
 						}
 					}
-					ready=true;
+					state=4;
 				}else {
 					misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
-					endMyTurn=true;
+					state=5;
 				}
-				newElement=true;
-				animateTarget=true;
-				attackSet=false;
 			}
-			if(animateTarget && newElement) {
+			if(state==4||state==5||state==10||state==11) {
 				if (wait < waitingTime / 2) {
 					wait++;
 				} else {
@@ -349,33 +351,20 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 						target.width = target.width + 160;
 						target.height = target.height + 160;
 					} else {
+						targetShown=false;
 						wait = 0;
-						targetShown = false;
-						animateTarget = false;
-						newElement = false;
+						if(state==4){
+							state=1;
+						}
+						if(state==10){
+							state=7;
+						}
+						if(state==5||state==11){
+							state=state+1;
+						}
 					}
 				}
 			}
-
-			//Player turn - must touch a square
-//			if(!animateTarget && ready && Gdx.input.justTouched()) {
-//				touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
-//				camera.unproject(touchPos);
-//
-//				if(1000<touchPos.x& touchPos.x<1800 & 80<touchPos.y & touchPos.y<880) {
-//					Coord co = convertiCoordinate(touchPos.x, touchPos.y);
-//
-//					//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
-//					if (!avversarioToccato[co.y][co.x]) {
-//						avversarioToccato[co.y][co.x]=true;
-//						ready=false;
-//						attackSet=true;
-//						animateTarget=true;
-//						targetCo=new Coord(co.x,co.y);
-//
-//					}
-//				}
-//			}
 
 
 		}else{	// campo di disposizione
@@ -524,7 +513,7 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 		return false;
 	}
 
-	public Ship sank(int a, int b){
+	private Ship sank(int a, int b){
 		int y=a;
 		int x=b;
 		int num = disposizione[y][x];
@@ -596,7 +585,7 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 
 	@Override
 	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-		if(!animateTarget && ready) {
+		if(state==1) {
 			touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
 			camera.unproject(touchPos);
 
@@ -606,9 +595,7 @@ public class FleetBattleGame extends ApplicationAdapter implements InputProcesso
 				//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
 				if (!avversarioToccato[co.y][co.x]) {
 					avversarioToccato[co.y][co.x] = true;
-					ready = false;
-					attackSet = true;
-					animateTarget = true;
+					state=2;
 					targetCo = new Coord(co.x, co.y);
 
 				}

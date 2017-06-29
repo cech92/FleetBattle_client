@@ -4,9 +4,10 @@ import java.util.concurrent.Future;
 
 /**
  * Created by Facoch on 26/06/17.
+ * Abstract class to implement different kinds of Adversary (AI, remote, local...)
  */
 
-public abstract class Adversary {
+abstract class Adversary {
 
 
     //used to attack the adversary
