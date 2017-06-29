@@ -2,6 +2,7 @@ package com.mobile.fleetbattle;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -22,8 +23,10 @@ import java.util.concurrent.Future;
 
 import static java.lang.Math.abs;
 
-public class FleetBattleGame extends ApplicationAdapter {
+public class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private Adversary enemy;
+
+	private Texture targetImage;
 	private Texture fireImage;
 	private Texture waterImage;
 	private Texture portaImage;
@@ -45,20 +48,34 @@ public class FleetBattleGame extends ApplicationAdapter {
 	private Array<Rectangle> misses;
 	private Array<Rectangle> hits;
 
+	private Rectangle target;
+	private boolean targetShown = false;
+	private Coord targetCo;
+
 
 	private boolean locked = false;
 	private int lockedTime = 0;
 	private int activeSub = 0;
 
 	//state variables
+	private boolean animateTarget=false;
 	private boolean ready=true;
 	private boolean endMyTurn=false;
 	private boolean startMyTurn=true;
 	private boolean enemyTurn=false;
+	private boolean newElement=false;
+	private boolean attackSet=false;
+	private boolean enemyAttackSet=false;
+	private	boolean secondHit=false;
+
+	private int wait=0;
+	private final int waitingTime=60; //60 frames = 1 sec
+
 
 	private int[][] disposizione;
 	private boolean disposto= false;
 	private boolean[][] avversarioToccato;
+
 
 
 	private class Coord{
@@ -80,6 +97,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 		disposizione = new int[10][10];
 		avversarioToccato = new boolean[10][10];
 
+		targetImage = new Texture(Gdx.files.internal("target.png"));
 		fireImage = new Texture(Gdx.files.internal("fire.png"));
 		waterImage = new Texture(Gdx.files.internal("water.png"));
 		portaImage = new Texture(Gdx.files.internal("porta.png"));
@@ -158,7 +176,6 @@ public class FleetBattleGame extends ApplicationAdapter {
 		stage.addActor(button);
 
 		Gdx.input.setInputProcessor(stage);
-
 	}
 
 	@Override
@@ -169,60 +186,92 @@ public class FleetBattleGame extends ApplicationAdapter {
 		camera.update();
 
 		if(disposto){
-			if(enemyTurn){
-				Future<Ship> futAttack = enemy.getAttack();
-				Ship attack;
-				while (!futAttack.isDone()) {
-					//ask to wait
+			//enemy's turn
+			if(enemyTurn && !enemyAttackSet && !newElement && !animateTarget){
+				if(secondHit && wait<waitingTime/2){
+					wait++;
+				}else {
+					Future<Ship> futAttack = enemy.getAttack();
+					Ship attack;
+					while (!futAttack.isDone()) {
+						//ask to wait
+					}
+					try {
+						attack = futAttack.get();
+					} catch (Exception ex) {
+						attack = new Ship(0, 0, 0, 0);
+					}
+					wait=0;
+					enemyAttackSet = true;
+					animateTarget = true;
+					targetCo = new Coord(attack.x, attack.y);
 				}
-				try{
-					attack = futAttack.get();
-				}catch (Exception ex){attack= new Ship(0,0,0,0);}
-				int x = attack.x;
-				int y = attack.y;
+
+			}
+			if(!animateTarget && enemyAttackSet) {
+				int x = targetCo.x;
+				int y = targetCo.y;
 				boolean hit = hit(y,x);
 				boolean lost = lost();
 				Results res = new Results(hit,sank(y,x),lost);
 				enemy.giveResults(res);
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+
 				if(hit){
+					secondHit=true;
 					hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					if(lost){
 						misses.add(new Rectangle(160 , 980 + 80, 80, 80));
 					}
 				}else{
+					secondHit=false;
 					misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					enemyTurn=false;
 					startMyTurn=true;
 				}
+				newElement = true;
+				animateTarget = true;
+				enemyAttackSet = false;
 
 			}
-			if(startMyTurn) {
-				if (camera.position.x < 920 + camera.viewportWidth / 2) {
-					camera.translate(+40, 0, 0);
-				}else{
-					startMyTurn=false;
-					ready=true;
+			// Transitions between turns
+			if(startMyTurn && !newElement ) {
+				if(wait<waitingTime){
+					wait=wait+1;
+				}else {
+					if (camera.position.x < 920 + camera.viewportWidth / 2) {
+						camera.translate(+40, 0, 0);
+					} else {
+						wait=0;
+						startMyTurn = false;
+						ready = true;
+					}
+					camera.update();
 				}
-				camera.update();
 			}
-			if(endMyTurn) {
-				if (camera.position.x >  camera.viewportWidth / 2) {
-					camera.translate(-40, 0, 0);
-				}else{
-					endMyTurn=false;
-					enemyTurn=true;
+			if(endMyTurn && !newElement) {
+				if(wait<waitingTime){
+					wait=wait+1;
+				}else {
+					if (camera.position.x > camera.viewportWidth / 2) {
+						camera.translate(-40, 0, 0);
+					} else {
+						wait=0;
+						endMyTurn = false;
+						enemyTurn = true;
+					}
+					camera.update();
 				}
-				camera.update();
 			}
+
+			//Draw everything
+
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
 			batch.draw(gridImage, 0, 0);
 			batch.draw(gridImage, 920, 0);
+			if(targetShown){
+				batch.draw(targetImage, target.x, target.y, target.width,target.height);
+			}
 			for (Rectangle miss:misses) {
 				batch.draw(waterImage, miss.x, miss.y);
 			}
@@ -244,44 +293,92 @@ public class FleetBattleGame extends ApplicationAdapter {
 			}
 			batch.end();
 
-			if(ready & Gdx.input.isTouched()) {
-				ready=false;
-				touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
-				camera.unproject(touchPos);
+			if(animateTarget && (attackSet || enemyAttackSet) ){
+				if(!targetShown){
+					if(attackSet){
+						target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+					}else {
+						target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+					}
+					targetShown=true;
+				}
+				if (target.width > 80) {
+					target.x=target.x+80;
+					target.y=target.y+80;
+					target.width=target.width-160;
+					target.height=target.height-160;
+				}else{
+					animateTarget=false;
+				}
+			}
+			if(!animateTarget && attackSet){
+				Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
+				Results res;
+				while (!futRes.isDone()) {
+					//ask to wait
+				}
+				try{
+					res = futRes.get();
+				}catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);}
 
-				if(1000<touchPos.x& touchPos.x<1800 & 80<touchPos.y & touchPos.y<880) {
-					Coord co = convertiCoordinate(touchPos.x, touchPos.y);
-
-					//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
-					if (!avversarioToccato[co.y][co.x]) {
-						avversarioToccato[co.y][co.x]=true;
-						Future<Results> futRes = enemy.attack(co.y,co.x);
-						Results res;
-						while (!futRes.isDone()) {
-							//ask to wait
+				if(res.hit){
+					hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+					Ship hitShip = res.sank;
+					if(hitShip.size!=0){
+						ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
+						if(res.lost){
+							hits.add(new Rectangle(920,920,80,80));
 						}
-						try{
-							res = futRes.get();
-						}catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);};
-						if(res.hit){
-							hits.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
-							Ship hitShip = res.sank;
-							if(hitShip.size!=0){
-								ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
-								if(res.lost){
-									hits.add(new Rectangle(920,920,80,80));
-								}
-							}
-							ready=true;
-						}else {
-							misses.add(new Rectangle((co.x * 80) + 80 + 920, (co.y * 80) + 80, 80, 80));
-							endMyTurn=true;
-						}
+					}
+					ready=true;
+				}else {
+					misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+					endMyTurn=true;
+				}
+				newElement=true;
+				animateTarget=true;
+				attackSet=false;
+			}
+			if(animateTarget && newElement) {
+				if (wait < waitingTime / 2) {
+					wait++;
+				} else {
+					if (target.width < 1520) {
+						target.x = target.x - 80;
+						target.y = target.y - 80;
+						target.width = target.width + 160;
+						target.height = target.height + 160;
+					} else {
+						wait = 0;
+						targetShown = false;
+						animateTarget = false;
+						newElement = false;
 					}
 				}
 			}
 
-		}else{
+			//Player turn - must touch a square
+//			if(!animateTarget && ready && Gdx.input.justTouched()) {
+//				touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+//				camera.unproject(touchPos);
+//
+//				if(1000<touchPos.x& touchPos.x<1800 & 80<touchPos.y & touchPos.y<880) {
+//					Coord co = convertiCoordinate(touchPos.x, touchPos.y);
+//
+//					//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
+//					if (!avversarioToccato[co.y][co.x]) {
+//						avversarioToccato[co.y][co.x]=true;
+//						ready=false;
+//						attackSet=true;
+//						animateTarget=true;
+//						targetCo=new Coord(co.x,co.y);
+//
+//					}
+//				}
+//			}
+
+
+		}else{	// campo di disposizione
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
 			batch.draw(gridImage, 0, 0);
@@ -393,6 +490,7 @@ public class FleetBattleGame extends ApplicationAdapter {
 	}
 
 	private void computeMatrix(){
+		Gdx.input.setInputProcessor(this);
 		int i =0;
 		for (Rectangle sub: ships
 			 ) {
@@ -474,5 +572,63 @@ public class FleetBattleGame extends ApplicationAdapter {
 			}
 		}
 		return true;
+	}
+
+	@Override
+	public boolean keyUp(int keycode) {
+		return false;
+	}
+
+	@Override
+	public boolean keyDown(int keycode) {
+		return false;
+	}
+
+	@Override
+	public boolean keyTyped(char character) {
+		return false;
+	}
+
+	@Override
+	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+		return false;
+	}
+
+	@Override
+	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+		if(!animateTarget && ready) {
+			touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+			camera.unproject(touchPos);
+
+			if (1000 < touchPos.x & touchPos.x < 1800 & 80 < touchPos.y & touchPos.y < 880) {
+				Coord co = convertiCoordinate(touchPos.x, touchPos.y);
+
+				//NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
+				if (!avversarioToccato[co.y][co.x]) {
+					avversarioToccato[co.y][co.x] = true;
+					ready = false;
+					attackSet = true;
+					animateTarget = true;
+					targetCo = new Coord(co.x, co.y);
+
+				}
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public boolean touchDragged(int screenX, int screenY, int pointer) {
+		return false;
+	}
+
+	@Override
+	public boolean mouseMoved(int screenX, int screenY) {
+		return false;
+	}
+
+	@Override
+	public boolean scrolled(int amount) {
+		return false;
 	}
 }
