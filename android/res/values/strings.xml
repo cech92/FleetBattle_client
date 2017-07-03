@@ -2,5 +2,8 @@
 <resources>
 
     <string name="app_name">FleetBattle</string>
+    <string name="fleet_battle">Fleet Battle</string>
+    <string name="stupid_adversary">Stupid Adversary</string>
+    <string name="medium_adversary">Medium Adversary</string>
 
 </resources>

@@ -36,6 +36,8 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private Texture portaImageRot;
 	private Texture incrImageRot;
 	private Texture torpImageRot;
+	private Texture winImage;
+	private Texture loseImage;
 
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
@@ -56,7 +58,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private int activeSub = 0;
 
 	//state variable
-	private int state=0;
+	private static int state=0;
 	/*
 	* State 0: Not disposed yet. When disposed go to state 12
 	* -- Player turn --
@@ -88,7 +90,6 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private boolean[][] avversarioToccato;
 
 
-
 	private class Coord{
 		int x;
 		int y;
@@ -103,6 +104,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 
 	@Override
 	public void create () {
+		state = 0;
 		Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
 		disposizione = new int[10][10];
@@ -119,6 +121,8 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 		portaImageRot = new Texture(Gdx.files.internal("portarot.png"));
 		incrImageRot = new Texture(Gdx.files.internal("incrrot.png"));
 		torpImageRot = new Texture(Gdx.files.internal("torprot.png"));
+		winImage = new Texture(Gdx.files.internal("win.png"));
+		loseImage = new Texture(Gdx.files.internal("lose.png"));
 
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, 920, 1120);
@@ -131,46 +135,22 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 
 		misses = new Array<Rectangle>();
 		hits = new Array<Rectangle>();
-		//ships default positions
 		ships = new Array<Rectangle>();
-		for (int i = 0; i < 4; i++) {
-			Rectangle aux = new Rectangle();
-			aux.x = 240;
-			aux.y = 80 + 80*i;
-			aux.width = 80;
-			aux.height = 80;
-			ships.add(aux);
-		}
-		for (int i = 0; i < 3; i++) {
-			Rectangle aux = new Rectangle();
-			aux.x = 320;
-			aux.y = 80 + 80*i;
-			aux.width = 160;
-			aux.height = 80;
-			ships.add(aux);
-		}
-		for (int i = 0; i < 2; i++) {
-			Rectangle aux = new Rectangle();
-			aux.x = 480;
-			aux.y = 80 + 80*i;
-			aux.width = 240;
-			aux.height = 80;
-			ships.add(aux);
-		}
-		for (int i = 0; i < 1; i++) {
-			Rectangle aux = new Rectangle();
-			aux.x = 80;
-			aux.y = 560;
-			aux.width = 320;
-			aux.height = 80;
+
+		// Random disposition for the ships
+		RandomDisposition disp = new RandomDisposition();
+		for (int i = 1; i < 11; i++) {
+			Rectangle aux = disp.returnShip(i);
 			ships.add(aux);
 		}
 
+
 		final TextButton button = new TextButton("Start Battle!", skin, "default");
-		button.setWidth(400);
-		button.setHeight(80);
-		button.setPosition(460-200, 1000);
-		button.getLabel().setFontScale(4, 4);
+		button.setWidth(820);
+		button.setHeight(130);
+		button.setPosition(50, 970);
+		button.getLabel().setFontScale(5, 5);
+
 
 		button.addListener(new ClickListener(){
 			@Override
@@ -178,9 +158,18 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 				int errori = controllaErrori();
 				switch (errori){
 					case 0 : computeMatrix(); state=12; break;
-					case 1 : button.setText("Navi fuori dai bordi!"); break;
-					case 2 : button.setText("Navi sovrapposte"); break;
-					case 3 : button.setText("Navi sovrapposte e fuori dai bordi"); break;
+					case 1 : button.getLabel().setFontScale(2.5f, 2.5f);
+							button.getLabel().setColor(1,0.25f,0,1);
+							button.setText("Invalid Disposition:\n Change ships outside the grid");
+							break;
+					case 2 : button.getLabel().setFontScale(2.5f, 2.5f);
+						button.getLabel().setColor(1,0.25f,0,1);
+						button.setText("Invalid Disposition:\n Change overlapping ships");
+						break;
+					case 3 : button.getLabel().setFontScale(2.4f, 2.4f);
+						button.getLabel().setColor(1,0.25f,0,1);
+						button.setText("Invalid Disposition:\n Change overlapping or outside the grid ships");
+						break;
 				}
 			}
 		});
@@ -230,9 +219,10 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					secondHit=true;
 					hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					if(lost){
-						misses.add(new Rectangle(160 , 980 + 80, 80, 80));
+						state = 14;
+					}else {
+						state = 10;
 					}
-					state=10;
 				}else{
 					secondHit=false;
 					misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
@@ -274,27 +264,33 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 			batch.begin();
 			batch.draw(gridImage, 0, 0);
 			batch.draw(gridImage, 920, 0);
+			for (Rectangle sub:ships) {
+				switch ((int)sub.width){
+					case 80 : switch ((int) sub.height){
+						case 80 : batch.draw(subImage, sub.x, sub.y, sub.width, sub.height); break;
+						case 160 : batch.draw(torpImageRot, sub.x, sub.y, sub.width, sub.height); break;
+						case 240 : batch.draw(incrImageRot, sub.x, sub.y, sub.width, sub.height); break;
+						case 320 : batch.draw(portaImageRot, sub.x, sub.y, sub.width, sub.height); break;
+					}  break;
+					case 160 : 	batch.draw(torpImage, sub.x, sub.y, sub.width, sub.height); break;
+					case 240 : 	batch.draw(incrImage, sub.x, sub.y, sub.width, sub.height); break;
+					case 320 : 	batch.draw(portaImage, sub.x, sub.y, sub.width, sub.height); break;
+				}
+			}
 			if(targetShown){
 				batch.draw(targetImage, target.x, target.y, target.width,target.height);
 			}
 			for (Rectangle miss:misses) {
-				batch.draw(waterImage, miss.x, miss.y);
+				batch.draw(waterImage, miss.x, miss.y, 80, 80);
 			}
 			for (Rectangle hit:hits) {
-				batch.draw(fireImage, hit.x, hit.y);
+				batch.draw(fireImage, hit.x, hit.y, 80, 80);
 			}
-			for (Rectangle sub:ships) {
-				switch ((int)sub.width){
-					case 80 : switch ((int) sub.height){
-						case 80 : batch.draw(subImage, sub.x, sub.y); break;
-						case 160 : batch.draw(torpImageRot, sub.x, sub.y); break;
-						case 240 : batch.draw(incrImageRot, sub.x, sub.y); break;
-						case 320 : batch.draw(portaImageRot, sub.x, sub.y); break;
-					}  break;
-					case 160 : 	batch.draw(torpImage, sub.x, sub.y); break;
-					case 240 : 	batch.draw(incrImage, sub.x, sub.y); break;
-					case 320 : 	batch.draw(portaImage, sub.x, sub.y); break;
-				}
+			if(state==14){
+				batch.draw(loseImage,80, 260);
+			}
+			if(state==13){
+				batch.draw(winImage,1000, 260);
 			}
 			batch.end();
 
@@ -331,11 +327,12 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					Ship hitShip = res.sank;
 					if(hitShip.size!=0){
 						ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
-						if(res.lost){
-							hits.add(new Rectangle(920,920,80,80));
-						}
 					}
-					state=4;
+					if(res.lost){
+						state = 13;
+					}else {
+						state = 4;
+					}
 				}else {
 					misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
 					state=5;
@@ -374,14 +371,14 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 			for (Rectangle sub:ships) {
 				switch ((int)sub.width){
 					case 80 : switch ((int) sub.height){
-						case 80 : batch.draw(subImage, sub.x, sub.y); break;
-						case 160 : batch.draw(torpImageRot, sub.x, sub.y); break;
-						case 240 : batch.draw(incrImageRot, sub.x, sub.y); break;
-						case 320 : batch.draw(portaImageRot, sub.x, sub.y); break;
+						case 80 : batch.draw(subImage, sub.x, sub.y, sub.width, sub.height); break;
+						case 160 : batch.draw(torpImageRot, sub.x, sub.y, sub.width, sub.height); break;
+						case 240 : batch.draw(incrImageRot, sub.x, sub.y, sub.width, sub.height); break;
+						case 320 : batch.draw(portaImageRot, sub.x, sub.y, sub.width, sub.height); break;
 					}  break;
-					case 160 : 	batch.draw(torpImage, sub.x, sub.y); break;
-					case 240 : 	batch.draw(incrImage, sub.x, sub.y); break;
-					case 320 : 	batch.draw(portaImage, sub.x, sub.y); break;
+					case 160 : 	batch.draw(torpImage, sub.x, sub.y, sub.width, sub.height); break;
+					case 240 : 	batch.draw(incrImage, sub.x, sub.y, sub.width, sub.height); break;
+					case 320 : 	batch.draw(portaImage, sub.x, sub.y, sub.width, sub.height); break;
 				}
 			}
 			batch.end();
@@ -617,5 +614,9 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	@Override
 	public boolean scrolled(int amount) {
 		return false;
+	}
+
+	static int getState(){
+		return state;
 	}
 }

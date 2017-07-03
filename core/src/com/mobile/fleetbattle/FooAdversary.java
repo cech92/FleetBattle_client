@@ -1,6 +1,5 @@
 package com.mobile.fleetbattle;
 
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,11 +16,12 @@ class FooAdversary extends Adversary {
     private int attackX=0;
     private int attackY=0;
 
-    private int[][] dispositionMatrix;
+    private int[][] dispositionMatrix = {{1,2,3,4,5,5,6,6,7,7},{8,8,8,9,9,9,10,10,10,10},
+            {0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0}};
     
-    FooAdversary(){
-        createDisposition();
-    }
+    FooAdversary(){}
 
     private boolean hit(int y, int x){
         if(dispositionMatrix[y][x]!=0 && dispositionMatrix[y][x]<100) {
@@ -31,66 +31,6 @@ class FooAdversary extends Adversary {
         return false;
     }
 
-    private void createDisposition(){
-        dispositionMatrix=new int[10][10];
-        placeBoats(1,4,10);
-        placeBoats(2,3,9);
-        placeBoats(3,2,7);
-        placeBoats(4,1,4);
-    }
-    
-    private void placeBoats(int numBoats, int dimBoats, int name){
-        Random generator = new Random();
-        int y; int x; boolean up;
-        for (int k = 0; k < numBoats; k++) {
-            y = generator.nextInt(10);
-            x = generator.nextInt(10);
-            up = generator.nextBoolean();
-            while(up && y>10-dimBoats){
-                y = generator.nextInt(10);
-            }
-            while(!up && x>10-dimBoats){
-                x = generator.nextInt(10);
-            }
-            int i=0;
-            if(up){
-                while(i<dimBoats){
-                    if(dispositionMatrix[y+i][x]==0){
-                        dispositionMatrix[y+i][x]=name;
-                        i++;
-                    }else{
-                        for (int j = 0; j < i; j++) {
-                            dispositionMatrix[y+j][x]=0;
-                        }
-                        i=0;
-                        y = generator.nextInt(10);
-                        x = generator.nextInt(10);
-                        while(y>7){
-                            y = generator.nextInt(10);
-                        }
-                    }
-                }
-            }else{
-                while(i<dimBoats){
-                    if(dispositionMatrix[y][x+i]==0){
-                        dispositionMatrix[y][x+i]=name;
-                        i++;
-                    }else{
-                        for (int j = 0; j < i; j++) {
-                            dispositionMatrix[y][x+j]=0;
-                        }
-                        i=0;
-                        y = generator.nextInt(10);
-                        x = generator.nextInt(10);
-                        while(x>7){
-                            x = generator.nextInt(10);
-                        }
-                    }
-                }
-            }
-            name = name-1;
-        }
-    }
 
     private Ship sank(int a, int b){
         int y=a;
@@ -148,7 +88,7 @@ class FooAdversary extends Adversary {
             @Override
             public Results call(){
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -168,7 +108,7 @@ class FooAdversary extends Adversary {
                 int y= attackY;
                 if (attackX!=9){attackX++;}else{attackX=0;attackY++;}
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

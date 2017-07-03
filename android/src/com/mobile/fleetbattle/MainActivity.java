@@ -15,6 +15,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void goDrop(View v) {
         Intent intent = new Intent(MainActivity.this, GameLauncher.class);
+        String enemy = "foo";
+        intent.putExtra("ENEMY", enemy);
+        startActivity(intent);
+    }
+
+    public void startAiGame(View v) {
+        Intent intent = new Intent(MainActivity.this, GameLauncher.class);
+        String enemy = "medium";
+        intent.putExtra("ENEMY", enemy);
         startActivity(intent);
     }
 

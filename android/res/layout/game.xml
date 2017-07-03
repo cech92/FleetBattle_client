@@ -5,11 +5,8 @@
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               tools:context="com.mobile.fleetbattle.GameLauncher"
-              android:weightSum="1">
+                android:id="@+id/fragment_container"
 
-    <fragment
-        android:id="@+id/fragment"
-        class="com.mobile.fleetbattle.GameFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+                android:weightSum="1">
+
 </RelativeLayout>
