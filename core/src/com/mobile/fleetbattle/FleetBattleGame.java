@@ -6,9 +6,11 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -38,6 +40,9 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private Texture torpImageRot;
 	private Texture winImage;
 	private Texture loseImage;
+
+	private BitmapFont font;
+	private String messageString = "";
 
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
@@ -96,6 +101,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 		int y;
 		Coord(int a, int b){
 			x=a; y=b;
+			x=a; y=b;
 		}
 	}
 
@@ -106,7 +112,8 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	@Override
 	public void create () {
 		state = 0;
-		Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+		Skin skin = new Skin(Gdx.files.internal("Holo-dark-xhdpi.json"));
+		font = new BitmapFont(Gdx.files.internal("Roboto-xhdpi.fnt"),Gdx.files.internal("Roboto-xhdpi.png"),false);
 
 		disposizione = new int[10][10];
 		avversarioToccato = new boolean[10][10];
@@ -150,7 +157,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 		button.setWidth(820);
 		button.setHeight(130);
 		button.setPosition(50, 970);
-		button.getLabel().setFontScale(5, 5);
+		button.getLabel().setFontScale(2);
 
 
 		button.addListener(new ClickListener(){
@@ -162,15 +169,15 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 						gameRunning=true;
 						state=12;
 						break;
-					case 1 : button.getLabel().setFontScale(2.5f, 2.5f);
+					case 1 : button.getLabel().setFontScale(1);
 							button.getLabel().setColor(1,0.25f,0,1);
 							button.setText("Invalid Disposition:\n Change ships outside the grid");
 							break;
-					case 2 : button.getLabel().setFontScale(2.5f, 2.5f);
+					case 2 : button.getLabel().setFontScale(1);
 						button.getLabel().setColor(1,0.25f,0,1);
 						button.setText("Invalid Disposition:\n Change overlapping ships");
 						break;
-					case 3 : button.getLabel().setFontScale(2.4f, 2.4f);
+					case 3 : button.getLabel().setFontScale(1);
 						button.getLabel().setColor(1,0.25f,0,1);
 						button.setText("Invalid Disposition:\n Change overlapping or outside the grid ships");
 						break;
@@ -197,9 +204,6 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 				}else {
 					Future<Ship> futAttack = enemy.getAttack();
 					Ship attack;
-					while (!futAttack.isDone()) {
-						//ask to wait
-					}
 					try {
 						attack = futAttack.get();
 					} catch (Exception ex) {
@@ -223,12 +227,15 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					secondHit=true;
 					hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					if(lost){
+						messageString ="Click back to exit game.";
 						state = 14;
 						gameRunning = false;
 					}else {
+						messageString ="Hit! The enemy gets another attack.";
 						state = 10;
 					}
 				}else{
+					messageString = "Miss! It's your turn now.";
 					secondHit=false;
 					misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					state=11;
@@ -243,6 +250,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					if (camera.position.x < 920 + camera.viewportWidth / 2) {
 						camera.translate(+40, 0, 0);
 					} else {
+						messageString = "Select a cell to attack";
 						wait=0;
 						state=1;
 					}
@@ -256,6 +264,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					if (camera.position.x > camera.viewportWidth / 2) {
 						camera.translate(-40, 0, 0);
 					} else {
+						messageString = "Please wait for the enemy attack.";
 						wait=0;
 						state=7;
 					}
@@ -297,9 +306,18 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 			if(state==13){
 				batch.draw(winImage,1000, 260);
 			}
+
+			font.setColor(0,0.2f,1,1);
+			font.getData().setScale(1.3f,1.5f);
+			font.draw(batch, messageString, 30, 1040, 860, Align.center, true);
+			font.draw(batch, messageString, 950, 1040, 860, Align.center, true);
+
 			batch.end();
 
 			if(state==2||state==8){
+				if(state==2){
+					messageString="Please wait for the enemy's response.";
+				}
 				if(!targetShown){
 					if(state==2){
 						target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
@@ -314,15 +332,14 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					target.width=target.width-160;
 					target.height=target.height-160;
 				}else{
+
 					state=state+1;
+
 				}
 			}
 			if(state==3){
 				Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
 				Results res;
-				while (!futRes.isDone()) {
-					//ask to wait
-				}
 				try{
 					res = futRes.get();
 				}catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);}
@@ -334,12 +351,15 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 						ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
 					}
 					if(res.lost){
+						messageString="Click back to exit game.";
 						state = 13;
 						gameRunning=false;
 					}else {
+						messageString="Hit! You get another attack.";
 						state = 4;
 					}
 				}else {
+					messageString="Miss! It's the enemy's turn now.";
 					misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
 					state=5;
 				}
