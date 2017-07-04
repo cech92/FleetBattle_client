@@ -120,7 +120,7 @@ class ComputerAdversary extends Adversary {
                 if (!alreadyAttacked[lastAttack.y][lastAttack.x+1])
                     plausibleAttacks.add(new Coord(lastAttack.x+1,lastAttack.y));
             }
-            if(lastAttack.y>0){
+            if(lastAttack.x>0){
                 if (!alreadyAttacked[lastAttack.y][lastAttack.x-1])
                     plausibleAttacks.add(new Coord(lastAttack.x-1,lastAttack.y));
             }

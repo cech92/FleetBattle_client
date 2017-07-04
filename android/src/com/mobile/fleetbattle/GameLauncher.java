@@ -37,8 +37,10 @@ public class GameLauncher extends AppCompatActivity implements AndroidFragmentAp
 
 	@Override
 	public void onBackPressed() {
-		int state = FleetBattleGame.getState();
-		if (state==13|| state==14){ super.onBackPressed(); }
+		boolean gameRunning = FleetBattleGame.getRunning();
+		if (!gameRunning){
+			super.onBackPressed();
+		}
 	}
 
 

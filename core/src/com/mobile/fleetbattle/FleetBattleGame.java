@@ -58,7 +58,8 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	private int activeSub = 0;
 
 	//state variable
-	private static int state=0;
+	private static boolean gameRunning=false;
+	private int state=0;
 	/*
 	* State 0: Not disposed yet. When disposed go to state 12
 	* -- Player turn --
@@ -157,7 +158,10 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 			public void clicked(InputEvent event, float x, float y){
 				int errori = controllaErrori();
 				switch (errori){
-					case 0 : computeMatrix(); state=12; break;
+					case 0 : computeMatrix();
+						gameRunning=true;
+						state=12;
+						break;
 					case 1 : button.getLabel().setFontScale(2.5f, 2.5f);
 							button.getLabel().setColor(1,0.25f,0,1);
 							button.setText("Invalid Disposition:\n Change ships outside the grid");
@@ -220,6 +224,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
 					if(lost){
 						state = 14;
+						gameRunning = false;
 					}else {
 						state = 10;
 					}
@@ -330,6 +335,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 					}
 					if(res.lost){
 						state = 13;
+						gameRunning=false;
 					}else {
 						state = 4;
 					}
@@ -598,6 +604,10 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 				}
 			}
 		}
+		if(state==13 || state==14){
+			Gdx.app.log("OVER","clicking");
+			Gdx.app.exit();
+		}
 		return false;
 	}
 
@@ -616,7 +626,7 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 		return false;
 	}
 
-	static int getState(){
-		return state;
+	static boolean getRunning(){
+		return (gameRunning);
 	}
 }
