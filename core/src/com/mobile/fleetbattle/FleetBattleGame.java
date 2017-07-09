@@ -81,7 +81,6 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 	* state 14: Player has lost
 	*/
 
-
 	private int wait=0;
 	@SuppressWarnings("FieldCanBeLocal")
 	private final int waitingTime=60; //60 frames = 1 sec
@@ -145,32 +144,34 @@ class FleetBattleGame extends ApplicationAdapter implements InputProcessor{
 			ships.add(aux);
 		}
 
-
 		final TextButton button = new TextButton("Start Battle!", skin, "default");
 		button.setWidth(820);
 		button.setHeight(130);
 		button.setPosition(50, 970);
 		button.getLabel().setFontScale(5, 5);
 
-
 		button.addListener(new ClickListener(){
 			@Override
 			public void clicked(InputEvent event, float x, float y){
 				int errori = controllaErrori();
 				switch (errori){
-					case 0 : computeMatrix();
+					case 0 :
+						computeMatrix();
 						gameRunning=true;
 						state=12;
 						break;
-					case 1 : button.getLabel().setFontScale(2.5f, 2.5f);
-							button.getLabel().setColor(1,0.25f,0,1);
-							button.setText("Invalid Disposition:\n Change ships outside the grid");
-							break;
-					case 2 : button.getLabel().setFontScale(2.5f, 2.5f);
+					case 1 :
+						button.getLabel().setFontScale(2.5f, 2.5f);
+						button.getLabel().setColor(1,0.25f,0,1);
+						button.setText("Invalid Disposition:\n Change ships outside the grid");
+						break;
+					case 2 :
+						button.getLabel().setFontScale(2.5f, 2.5f);
 						button.getLabel().setColor(1,0.25f,0,1);
 						button.setText("Invalid Disposition:\n Change overlapping ships");
 						break;
-					case 3 : button.getLabel().setFontScale(2.4f, 2.4f);
+					case 3 :
+						button.getLabel().setFontScale(2.4f, 2.4f);
 						button.getLabel().setColor(1,0.25f,0,1);
 						button.setText("Invalid Disposition:\n Change overlapping or outside the grid ships");
 						break;

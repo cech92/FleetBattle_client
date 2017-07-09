@@ -9,26 +9,29 @@ import android.support.v7.app.AppCompatActivity;
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
 
 
-public class GameLauncher extends AppCompatActivity implements AndroidFragmentApplication.Callbacks {
-	public static final String TAG = "GameLauncher";
-
+public class GameP2PLauncher extends AppCompatActivity implements AndroidFragmentApplication.Callbacks {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.game);
 
 		String enemy;
-		//Bundle extras = getIntent().getExtras();
-		//enemy= extras.getString("ENEMY");
+		Bundle extras = getIntent().getExtras();
+		enemy= extras.getString("ENEMY");
 
 		FragmentManager fragmentManager = getSupportFragmentManager();
 		FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 		Fragment game;
-		if(Config.getCurrentGameType() == Config.SINGLEEASYGAME)
-			game = new GameFragmentFoo();
-		else
+		if(enemy!=null){
+			switch (enemy){
+				case "foo" : game = new GameFragmentFoo(); break;
+				case "medium" : game = new GameFragmentMedium(); break;
+				default : game = new GameFragmentMedium(); break;
+			}
+		}else{
 			game = new GameFragmentMedium();
-		fragmentTransaction.add(R.id.fragment_container, game, "gioco");
+		}
+		fragmentTransaction.add(R.id.fragment_container,game,"gioco");
 		fragmentTransaction.commit();
 	}
 

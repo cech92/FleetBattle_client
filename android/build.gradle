@@ -1,4 +1,18 @@
 android {
+    signingConfigs {
+        config {
+            keyAlias 'key'
+            keyPassword 'mprogramming'
+            storeFile file('/Users/cech92/FleetBattle_client/android/key.jks')
+            storePassword 'mprogramming'
+        }
+        configDebug {
+            keyAlias 'key'
+            keyPassword 'mprogramming'
+            storeFile file('/Users/cech92/FleetBattle_client/android/key.jks')
+            storePassword 'mprogramming'
+        }
+    }
     buildToolsVersion "25.0.2"
     compileSdkVersion 25
     sourceSets {
@@ -19,17 +33,27 @@ android {
     }
     defaultConfig {
         applicationId "com.mobile.fleetbattle"
-        minSdkVersion 22
+        minSdkVersion 20
         targetSdkVersion 25
+        multiDexEnabled true
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.config
+            debuggable true
+        }
+        debug {
+            signingConfig signingConfigs.configDebug
+        }
     }
 }
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.android.support:support-v4:25.3.1'
-    compile 'com.google.android.gms:play-services-ads:9.6.1'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
+    compile 'com.android.support:multidex:1.0.1'
 }
 
 

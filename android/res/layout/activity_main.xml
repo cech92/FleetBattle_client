@@ -25,6 +25,20 @@
         android:layout_height="wrap_content"
         android:text="@string/medium_adversary"
         android:onClick="startAiGame"/>
+
+    <Button
+        android:id="@+id/button4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/local_adversary"
+        android:onClick="startP2PGame"/>
+
+    <Button
+        android:id="@+id/button5"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/online_adversary"
+        android:onClick="startOnlineGame"/>
 </LinearLayout>
 
 
