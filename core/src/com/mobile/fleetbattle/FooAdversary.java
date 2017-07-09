@@ -88,7 +88,7 @@ class FooAdversary extends Adversary {
             @Override
             public Results call(){
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -108,7 +108,7 @@ class FooAdversary extends Adversary {
                 int y= attackY;
                 if (attackX!=9){attackX++;}else{attackX=0;attackY++;}
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -119,7 +119,11 @@ class FooAdversary extends Adversary {
 
     //used to respond to an adversary attack
     public void giveResults(Results res){
-
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }
