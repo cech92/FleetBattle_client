@@ -20,12 +20,19 @@ import android.widget.TextView;
 
 import com.mobile.fleetbattle.DeviceListFragment.DeviceActionListener;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.Enumeration;
 
 /**
  * A fragment that manages a particular peer and allows interaction with device
@@ -40,6 +47,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private WifiP2pInfo info;
     ProgressDialog progressDialog = null;
     private static String clientAddress;
+    private final static String p2pInt = "p2p-p2p0";
+    public static final String IP_SERVER = "192.168.49.1";
+    public static int PORT = 8988;
+    private static boolean server_running = false;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -85,9 +96,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         Intent serviceIntent = new Intent(getActivity(), P2PGameService.class);
                         serviceIntent.setAction(P2PGameService.ACTION_LAUNCH_GAME);
                         //serviceIntent.putExtra(P2PGameService.EXTRAS_FILE_PATH, uri.toString());
-                        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
+                        serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS,
                                 info.groupOwnerAddress.getHostAddress());
-                        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_PORT, 8988);
+                        serviceIntent.putExtra(P2PGameService.EXTRAS_PORT, PORT);
                         getActivity().startService(serviceIntent);
                         ((P2PGameLauncher) getActivity()).launchGame(1);
                     }
@@ -96,11 +107,81 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         return mContentView;
     }
 
+    private static String getDottedDecimalIP(byte[] ipAddr) {
+        String ipAddrStr = "";
+        for (int i=0; i<ipAddr.length; i++) {
+            if (i > 0) {
+                ipAddrStr += ".";
+            }
+            ipAddrStr += ipAddr[i]&0xFF;
+        }
+        return ipAddrStr;
+    }
+
+    public static String getLocalIPAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+
+                    String iface = intf.getName();
+                    if(iface.matches(".*" +p2pInt+ ".*")){
+                        if (inetAddress instanceof Inet4Address) { // fix for Galaxy Nexus. IPv4 is easy to use :-)
+                            return getDottedDecimalIP(inetAddress.getAddress());
+                        }
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            Log.e("", "getLocalIPAddress()", ex);
+        } catch (NullPointerException ex) {
+            Log.e("", "getLocalIPAddress()", ex);
+        }
+        return null;
+    }
+
+    public static String getIPFromMac(String MAC) {
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader("/proc/net/arp"));
+            String line;
+            while ((line = br.readLine()) != null) {
+
+                String[] splitted = line.split(" +");
+                if (splitted != null && splitted.length >= 4) {
+                    // Basic sanity check
+                    String device = splitted[5];
+                    if (device.matches(".*" +p2pInt+ ".*")){
+                        String mac = splitted[3];
+                        if (mac.matches(MAC)) {
+                            return splitted[0];
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        System.out.println("RESULT CODE: " + resultCode);
+        System.out.println("REQUEST CODE: " + requestCode);
+        System.out.println("DATA: " + data);
+        String localIP = getLocalIPAddress();
+        // Trick to find the ip in the file /proc/net/arp
+        String client_mac_fixed = new String(device.deviceAddress).replace("99", "19");
+        String clientIP = getIPFromMac(client_mac_fixed);
 
-        // User has picked an image. Transfer it to group owner i.e peer using
-        // P2PGameService.
         Uri uri = data.getData();
         TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
         statusText.setText("Sending: " + uri);
@@ -108,9 +189,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         Intent serviceIntent = new Intent(getActivity(), P2PGameService.class);
         serviceIntent.setAction(P2PGameService.ACTION_LAUNCH_GAME);
         //serviceIntent.putExtra(P2PGameService.EXTRAS_FILE_PATH, uri.toString());
-        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
-                info.groupOwnerAddress.getHostAddress());
-        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_PORT, 8988);
+        if(localIP.equals(IP_SERVER)){
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS, clientIP);
+        }else{
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS, IP_SERVER);
+        }
+        serviceIntent.putExtra(P2PGameService.EXTRAS_PORT, PORT);
         getActivity().startService(serviceIntent);
     }
 
@@ -135,9 +219,18 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // After the group negotiation, we assign the group owner as the file
         // server. The file server is single threaded, single connection server
         // socket.
+
+        mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
+
+//        if (!server_running){
+//            new ServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text)).execute();
+//            server_running = true;
+//        }
+
         if (info.groupFormed && info.isGroupOwner) {
-            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
+            new ServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
                     .execute();
+            server_running = true;
         } else if (info.groupFormed) {
             // The other device acts as the client. In this case, we enable the
             // get file button.
@@ -186,7 +279,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      * A simple server socket that accepts connection and writes some data on
      * the stream.
      */
-    public static class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
+    public static class ServerAsyncTask extends AsyncTask<Void, Void, String> {
 
         private Context context;
         private TextView statusText;
@@ -196,14 +289,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
          * @param context
          * @param statusText
          */
-        public FileServerAsyncTask(Context context, View statusText) {
+        public ServerAsyncTask(Context context, View statusText) {
             this.context = context;
             this.statusText = (TextView) statusText;
         }
 
         @Override
         protected String doInBackground(Void... params) {
-            if (clientAddress == null) {
                 try {
                     ServerSocket serverSocket = new ServerSocket(8988);
                     Log.d(P2PGameLauncher.TAG, "Server: Socket opened");
@@ -229,42 +321,28 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         System.out.println((int) b1);
                     }
                     if ((int) b[0] == 0) {
-                        System.out.println("ADDRESS: " + client.getInetAddress());
-                        clientAddress = client.getInetAddress().toString().substring(1);
-                        System.out.println("ADDRESS: " + clientAddress);
                         ((P2PGameLauncher) context).launchGame(0);
                     } else if ((int) b[0] == 1)
                         ((P2PGameLauncher) context).receiveAttack(b);
                     else if ((int) b[0] == 2)
                         ((P2PGameLauncher) context).responseAttack(b);
-//                BufferedReader r = new BufferedReader(new InputStreamReader(inputStream));
-//                StringBuilder total = new StringBuilder();
-//                String line;
-//                while ((line = r.readLine()) != null) {
-//                    total.append(line).append('\n');
-//                }
-                    //System.out.println("INPUTSTREAM: " + total.toString());
+
+                    //OutputStream os = client.getOutputStream();
+                    //os.write(ret);
+
+                    //copyFile(inputStream, os);
+
+//                    OutputStream outputStream = client.getOutputStream();
+
                     serverSocket.close();
-                    //return f.getAbsolutePath();
+                    inputStream.close();
+                    buffer.close();
+                    server_running = false;
                     return "";
                 } catch (IOException e) {
                     Log.e(P2PGameLauncher.TAG, e.getMessage());
                     return null;
                 }
-            } else {
-                try {
-                    ServerSocket serverSocket = new ServerSocket(8988);
-
-                    Socket ss= serverSocket.accept();
-                    OutputStream os= ss.getOutputStream();
-
-                    System.out.println("OUTPUT " + os.toString());
-                    return os.toString();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return  null;
-                }
-            }
         }
 
         /*
@@ -295,22 +373,30 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         Intent serviceIntent = new Intent(getActivity(), P2PGameService.class);
         serviceIntent.setAction(P2PGameService.ACTION_SEND_ATTACK);
         serviceIntent.putExtra("bytes", b);
-        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
-                info.groupOwnerAddress.getHostAddress());
-        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_PORT, 8988);
+//        serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
+//                info.groupOwnerAddress.getHostAddress());
+        String localIP = getLocalIPAddress();
+        String client_mac_fixed = new String(device.deviceAddress).replace("99", "19");
+        String clientIP = getIPFromMac(client_mac_fixed);
+        if(localIP.equals(IP_SERVER)){
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS, clientIP);
+        }else{
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS, IP_SERVER);
+        }
+        serviceIntent.putExtra(P2PGameService.EXTRAS_PORT, PORT);
         getActivity().startService(serviceIntent);
     }
 
     public void sendAttackResponse(byte[] b, int turn) {
         if (turn == 0) {
             Intent serviceIntent = new Intent(getActivity(), P2PGameService.class);
-            serviceIntent.setAction(P2PGameService.ACTION_SEND_ATTACK_RESPONSE);
+             serviceIntent.setAction(P2PGameService.ACTION_SEND_ATTACK_RESPONSE);
             serviceIntent.putExtra("bytes", b);
             serviceIntent.putExtra("turn", turn);
             System.out.println("ADDRESS 2: " + info.groupOwnerAddress.getHostAddress());
-            serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS,
                     clientAddress);
-            serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_PORT, 8988);
+            serviceIntent.putExtra(P2PGameService.EXTRAS_PORT, PORT);
             getActivity().startService(serviceIntent);
         }
         else {
@@ -318,9 +404,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             serviceIntent.setAction(P2PGameService.ACTION_SEND_ATTACK_RESPONSE);
             serviceIntent.putExtra("bytes", b);
             serviceIntent.putExtra("turn", turn);
-            serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_ADDRESS,
+            serviceIntent.putExtra(P2PGameService.EXTRAS_ADDRESS,
                     info.groupOwnerAddress.getHostAddress());
-            serviceIntent.putExtra(P2PGameService.EXTRAS_GROUP_OWNER_PORT, 8988);
+            serviceIntent.putExtra(P2PGameService.EXTRAS_PORT, PORT);
             getActivity().startService(serviceIntent);
         }
     }
@@ -329,12 +415,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         byte buf[] = new byte[1024];
         int len;
         try {
-            while ((len = inputStream.read(buf)) != -1) {
-                out.write(buf, 0, len);
-
+            if (inputStream != null) {
+                while ((len = inputStream.read(buf)) != -1) {
+                    out.write(buf, 0, len);
+                }
+                inputStream.close();
             }
             out.close();
-            inputStream.close();
         } catch (IOException e) {
             Log.d(P2PGameLauncher.TAG, e.toString());
             return false;

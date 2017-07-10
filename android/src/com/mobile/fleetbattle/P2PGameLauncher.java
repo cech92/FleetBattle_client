@@ -57,33 +57,6 @@ public class P2PGameLauncher extends AppCompatActivity implements AndroidFragmen
 		fragmentTransaction.add(R.id.fragment_container, gameFrag, "gioco");
 		fragmentTransaction.hide(gameFrag);
 		fragmentTransaction.commit();
-		//mReceiver = new WiFiDirectBroadcastReceiver(mManager, mChannel, this);
-
-//		final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
-//				.findFragmentById(R.id.frag_list);
-//		fragment.onInitiateDiscovery();
-//		mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
-//			@Override
-//			public void onSuccess() {
-//				System.out.println("trovato");
-//			}
-//
-//			@Override
-//			public void onFailure(int reasonCode) {
-//				System.out.println("non trovato");
-//			}
-//		});
-
-//		FragmentManager fragmentManager = getSupportFragmentManager();
-//		FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-//		Config.setCurrentGameType(Config.P2PGAME);
-//		gameFrag = new OnlineGameFragment();
-//		fragmentTransaction.add(R.id.fragment_container, gameFrag, "gioco");
-//		fragmentTransaction.commit();
-
-
-//		if (!state)
-//			startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
 	}
 
 	@Override

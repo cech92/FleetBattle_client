@@ -95,7 +95,6 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
     private int[][] disposizione;
     private boolean[][] avversarioToccato;
     Activity mActivity;
-    DeviceDetailFragment ddf;
 
     private class Coord{
         int x;
@@ -155,6 +154,8 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         }
         System.out.println(s.x + " " + s.y + " " + s.size);
 
+        //return mMsgBuf;
+        DeviceDetailFragment ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
         ddf.sendAttackResponse(mMsgBuf, turn);
 //        for (Participant p : OnlineGameLauncher.mParticipants) {
 //            Games.RealTimeMultiplayer.sendReliableMessage(mGoogleApiClient, null, mMsgBuf,
@@ -201,7 +202,6 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
 
     P2PFleetBattleGame(Activity activity){
         mActivity = activity;
-        ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
     }
 
     @Override
@@ -766,6 +766,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         mMsgBuf[1] = (byte)y;
         mMsgBuf[2] = (byte)x;
 
+        DeviceDetailFragment ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
         ddf.sendAttack(mMsgBuf);
 
 //        for (Participant p : OnlineGameLauncher.mParticipants) {
