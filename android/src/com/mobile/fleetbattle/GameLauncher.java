@@ -17,10 +17,6 @@ public class GameLauncher extends AppCompatActivity implements AndroidFragmentAp
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.game);
 
-		String enemy;
-		//Bundle extras = getIntent().getExtras();
-		//enemy= extras.getString("ENEMY");
-
 		FragmentManager fragmentManager = getSupportFragmentManager();
 		FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 		Fragment game;

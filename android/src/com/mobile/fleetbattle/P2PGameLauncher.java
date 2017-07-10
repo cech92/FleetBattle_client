@@ -19,12 +19,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
-import com.mobile.fleetbattle.DeviceListFragment.DeviceActionListener;
-
 
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
-
-import java.lang.reflect.Method;
 
 import static com.mobile.fleetbattle.R.layout.game;
 

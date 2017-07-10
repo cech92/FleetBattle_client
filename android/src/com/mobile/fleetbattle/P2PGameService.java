@@ -1,21 +1,13 @@
 package com.mobile.fleetbattle;
 
 import android.app.IntentService;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.Binder;
-import android.os.IBinder;
 import android.util.Log;
 
 import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
@@ -47,7 +39,6 @@ public class P2PGameService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Context context = getApplicationContext();
-        System.out.println("INTENT: " + intent.getAction().toString());
         if (intent.getAction().equals(ACTION_SEND_ATTACK_RESPONSE)) {
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
             Socket socket = new Socket();

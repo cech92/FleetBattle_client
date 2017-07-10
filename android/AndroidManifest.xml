@@ -50,7 +50,7 @@
             </intent-filter>
         </activity>
 
-        <service android:enabled="true" android:name="com.mobile.fleetbattle.FileTransferService" />
+        <service android:enabled="true" android:name="com.mobile.fleetbattle.P2PGameService" />
 
     </application>
 

@@ -7,34 +7,29 @@
               android:orientation="vertical" >
 
     <TextView
-        android:id="@+id/textView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/fleet_battle"/>
 
     <Button
-        android:id="@+id/button2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:onClick="goDrop"
         android:text="@string/stupid_adversary"/>
 
     <Button
-        android:id="@+id/button3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/medium_adversary"
         android:onClick="startAiGame"/>
 
     <Button
-        android:id="@+id/button4"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/local_adversary"
         android:onClick="startP2PGame"/>
 
     <Button
-        android:id="@+id/button5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/online_adversary"
