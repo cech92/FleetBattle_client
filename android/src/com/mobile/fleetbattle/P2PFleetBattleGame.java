@@ -114,10 +114,22 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         int x = (int)b[2];
         int hitted;
         targetCo = new Coord(x, y);
+        if(!targetShown){
+            target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+            targetShown=true;
+        }
+        if (target != null) {
+            if (target.width > 80) {
+                target.x = target.x + 80;
+                target.y = target.y + 80;
+                target.width = target.width - 160;
+                target.height = target.height - 160;
+            }
+        }
         if(disposizione[y][x]!=0 && disposizione[y][x]<100) {
             disposizione[y][x]+=100;
             hitted = 1;
-            System.out.println("Colpito");
+            hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
             secondHit=true;
             if(lost()){
                 state = 14;
@@ -127,8 +139,8 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
             }
         }
         else {
-            System.out.println("Non colpito");
             hitted = 0;
+            misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
             secondHit=false;
             state=1;
 
@@ -152,7 +164,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         else {
             mMsgBuf[3] = (byte)-1;
         }
-        System.out.println(s.x + " " + s.y + " " + s.size);
+        targetShown=false;
 
         //return mMsgBuf;
         DeviceDetailFragment ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
@@ -164,17 +176,9 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
     }
 
     public void responseAttack(byte[] b) {
-        System.out.println("BYTE RICEVUTI: " + (int)b[0]);
-        System.out.println("BYTE RICEVUTI: " + (int)b[1]);
-        System.out.println("BYTE RICEVUTI: " + (int)b[2]);
         if((int)b[1] == 1){
-            System.out.println("COLPITO");
             hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
             state = 1;
-//            Ship hitShip = res.sank;
-//            if(hitShip.size!=0){
-//                ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
-//            }
             if ((int)b[3] != -1) {
                 int x = (int)b[3];
                 int y = (int)b[4];
@@ -189,8 +193,6 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         }else {
             misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
             state=5;
-            System.out.println(camera.position.x);
-            System.out.println(camera.viewportWidth / 2);
             if (camera.position.x > camera.viewportWidth / 2) {
                 camera.translate(-920, 0, 0);
             }else {
