@@ -27,23 +27,24 @@ import com.google.android.gms.games.multiplayer.realtime.RoomConfig;
 public class OnlineGameFragment extends AndroidFragmentApplication {
     Adversary enemy = null;
     OnlineFleetBattleGame ofbg;
+    P2PFleetBattleGame p2pfbg;
 
     public OnlineGameFragment() {
-        if (Config.getCurrentGameType() == Config.P2PGAME)
-            enemy = new P2PAdversary();
-        else if (Config.getCurrentGameType() == Config.SINGLEEASYGAME)
+        if (Config.getCurrentGameType() == Config.SINGLEEASYGAME)
             enemy = new FooAdversary();
-        else if (Config.getCurrentGameType() == Config.ONLINEGAME)
-            enemy = new OnlineAdversary();
-        else
+        else if (Config.getCurrentGameType() == Config.SINGLEMEDIUMGAME)
             enemy = new ComputerAdversary();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        System.out.println("GAME TYPE: " + Config.getCurrentGameType());
         if (Config.getCurrentGameType() == Config.ONLINEGAME) {
-            ofbg = new OnlineFleetBattleGame(enemy);
+            ofbg = new OnlineFleetBattleGame();
             return initializeForView(ofbg);
+        } else if (Config.getCurrentGameType() == Config.P2PGAME) {
+            p2pfbg = new P2PFleetBattleGame(getActivity());
+            return initializeForView(p2pfbg);
         }
         return initializeForView(new FleetBattleGame(enemy));
     }
@@ -52,14 +53,22 @@ public class OnlineGameFragment extends AndroidFragmentApplication {
         return ofbg;
     }
 
+    public P2PFleetBattleGame getP2PFleetBattleGame() {
+        return p2pfbg;
+    }
+
+    public void enableStartButton() {
+        ofbg.enableStartButton();
+    }
+
     public void receiveAttack(byte[] b) {
-        System.out.println("COORDS: " + String.valueOf(b[1]) + String.valueOf(b[2]));
         ofbg.checkAttack(b);
     }
 
     public void getAttackResponse(byte[] b) {
         ofbg.responseAttack(b);
     }
+
 
 }
 

@@ -58,8 +58,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void goDrop(View v) {
         Config.setCurrentGameType(Config.SINGLEEASYGAME);
         Intent intent = new Intent(MainActivity.this, GameLauncher.class);
-//        String enemy = "foo";
-//        intent.putExtra("ENEMY", enemy);
         startActivity(intent);
     }
 
@@ -70,27 +68,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void startAiGame(View v) {
         Config.setCurrentGameType(Config.SINGLEMEDIUMGAME);
         Intent intent = new Intent(MainActivity.this, GameLauncher.class);
-//        String enemy = "medium";
-//        intent.putExtra("ENEMY", enemy);
         startActivity(intent);
     }
 
     public void startP2PGame(View v) {
         Config.setCurrentGameType(Config.P2PGAME);
-        Intent intent = new Intent(MainActivity.this, GameLauncher.class);
+        Intent intent = new Intent(MainActivity.this, P2PGameLauncher.class);
         startActivity(intent);
     }
 
     public void startOnlineGame(View v) {
         Config.setCurrentGameType(Config.ONLINEGAME);
-//        mGoogleApiClient = new GoogleApiClient.Builder(this)
-//                .addConnectionCallbacks(this)
-//                .addOnConnectionFailedListener(this)
-//                .addApi(Games.API).addScope(Games.SCOPE_GAMES)
-//                .setViewForPopups(findViewById(android.R.id.content))
-//                .build();
-//
-//        mGoogleApiClient.connect();
         Intent intent = new Intent(MainActivity.this, OnlineGameLauncher.class);
         startActivity(intent);
     }
@@ -119,22 +107,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Toast.makeText(MainActivity.this, "Non Connesso" + connectionResult.toString(), Toast.LENGTH_LONG).show();
 
-//        if (mResolvingConnectionFailure) {
-//            // already resolving
-//            return;
-//        }
-//
-//        // if the sign-in button was clicked or if auto sign-in is enabled,
-//        // launch the sign-in flow
         if (mSignInClicked || mAutoStartSignInFlow) {
             mAutoStartSignInFlow = false;
             mSignInClicked = false;
             mResolvingConnectionFailure = true;
 
-            // Attempt to resolve the connection failure using BaseGameUtils.
-            // The R.string.signin_other_error value should reference a generic
-            // error string in your strings.xml file, such as "There was
-            // an issue with sign-in, please try again later."
             if (!BaseGameUtils.resolveConnectionFailure(this,
                     mGoogleApiClient, connectionResult,
                     RC_SIGN_IN, R.string.signin_other_error)) {

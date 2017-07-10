@@ -115,14 +115,6 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
 
         if (Config.getCurrentGameType() == Config.ONLINEGAME) {
             mGoogleApiClient = MainActivity.getMGoogleApiClient();
-//            mGoogleApiClient = new GoogleApiClient.Builder(this)
-//                    .addConnectionCallbacks(this)
-//                    .addOnConnectionFailedListener(this)
-//                    .addApi(Games.API).addScope(Games.SCOPE_GAMES)
-//                    .setViewForPopups(findViewById(android.R.id.content))
-//                    .build();
-//
-//            mGoogleApiClient.connect();
 
         }
 
@@ -132,17 +124,8 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
         gameFrag = new OnlineGameFragment();
         fragmentTransaction.add(R.id.fragment_container, gameFrag, "gioco");
         fragmentTransaction.commit();
-        System.out.println("1");
-
 
         startQuickGame();
-
-//		String enemy;
-//		Bundle extras = getIntent().getExtras();
-//		enemy= extras.getString("ENEMY");
-
-        System.out.println("2");
-
     }
 
     public GoogleApiClient getMGoogleApiClient() {
@@ -156,19 +139,6 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
             super.onBackPressed();
         }
     }
-
-//	@Override
-//	public void onResume() {
-//		super.onResume();
-//		mReceiver = new WiFiDirectBroadcastReceiver(mManager, mChannel, this);
-//		registerReceiver(mReceiver, mIntentFilter);
-//	}
-//
-//	@Override
-//	public void onPause() {
-//		super.onPause();
-//		unregisterReceiver(mReceiver);
-//	}
 
     private void startQuickGame() {
         // auto-match criteria to invite one random automatch opponent.
@@ -212,174 +182,6 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
     @Override
     public void exit() {}
 
-//	public void resetData() {
-//		DeviceListFragment fragmentList = (DeviceListFragment) getFragmentManager()
-//				.findFragmentById(R.id.frag_list);
-//		DeviceDetailFragment fragmentDetails = (DeviceDetailFragment) getFragmentManager()
-//				.findFragmentById(R.id.frag_detail);
-//		if (fragmentList != null) {
-//			fragmentList.clearPeers();
-//		}
-//		if (fragmentDetails != null) {
-//			fragmentDetails.resetViews();
-//		}
-//	}
-//
-//	@Override
-//	public boolean onCreateOptionsMenu(Menu menu) {
-//		MenuInflater inflater = getMenuInflater();
-//		inflater.inflate(R.menu.action_items, menu);
-//		return true;
-//	}
-//
-//	/*
-//     * (non-Javadoc)
-//     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-//     */
-//	@Override
-//	public boolean onOptionsItemSelected(MenuItem item) {
-//		switch (item.getItemId()) {
-//			case R.id.atn_direct_enable:
-//				if (mManager != null && mChannel != null) {
-//
-//					// Since this is the system wireless settings activity, it's
-//					// not going to send us a result. We will be notified by
-//					// WiFiDeviceBroadcastReceiver instead.
-//
-//					startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
-//				} else {
-//					Log.e(TAG, "channel or manager is null");
-//				}
-//				return true;
-//
-//			case R.id.atn_direct_discover:
-//				if (!isWifiP2pEnabled) {
-//					Toast.makeText(GameLauncher.this, R.string.p2p_off_warning,
-//							Toast.LENGTH_SHORT).show();
-//					return true;
-//				}
-//				final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
-//						.findFragmentById(R.id.frag_list);
-//				fragment.onInitiateDiscovery();
-//				mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
-//
-//					@Override
-//					public void onSuccess() {
-//						Toast.makeText(GameLauncher.this, "Discovery Initiated",
-//								Toast.LENGTH_SHORT).show();
-//					}
-//
-//					@Override
-//					public void onFailure(int reasonCode) {
-//						Toast.makeText(GameLauncher.this, "Discovery Failed : " + reasonCode,
-//								Toast.LENGTH_SHORT).show();
-//					}
-//				});
-//				return true;
-//			default:
-//				return super.onOptionsItemSelected(item);
-//		}
-//	}
-//
-//	@Override
-//	public void showDetails(WifiP2pDevice device) {
-//		DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
-//				.findFragmentById(R.id.frag_detail);
-//		fragment.showDetails(device);
-//
-//	}
-//
-//	@Override
-//	public void connect(WifiP2pConfig config) {
-//		mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
-//
-//			@Override
-//			public void onSuccess() {
-//				Toast.makeText(GameLauncher.this, "Connect failed. Retry.",
-//						Toast.LENGTH_SHORT).show();
-//			}
-//
-//			@Override
-//			public void onFailure(int reason) {
-//				Toast.makeText(GameLauncher.this, "Connect failed. Retry.",
-//						Toast.LENGTH_SHORT).show();
-//			}
-//		});
-//	}
-//
-//	@Override
-//	public void disconnect() {
-//		final DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
-//				.findFragmentById(R.id.frag_detail);
-//		fragment.resetViews();
-//		mManager.removeGroup(mChannel, new WifiP2pManager.ActionListener() {
-//
-//			@Override
-//			public void onFailure(int reasonCode) {
-//				Log.d(TAG, "Disconnect failed. Reason :" + reasonCode);
-//
-//			}
-//
-//			@Override
-//			public void onSuccess() {
-//				fragment.getView().setVisibility(View.GONE);
-//			}
-//
-//		});
-//	}
-//
-//	@Override
-//	public void onChannelDisconnected() {
-//		// we will try once more
-//		if (mManager != null && !retryChannel) {
-//			Toast.makeText(this, "Channel lost. Trying again", Toast.LENGTH_LONG).show();
-//			resetData();
-//			retryChannel = true;
-//			mManager.initialize(this, getMainLooper(), this);
-//		} else {
-//			Toast.makeText(this,
-//					"Severe! Channel is probably lost premanently. Try Disable/Re-Enable P2P.",
-//					Toast.LENGTH_LONG).show();
-//		}
-//	}
-//
-//	@Override
-//	public void cancelDisconnect() {
-//
-//        /*
-//         * A cancel abort request by user. Disconnect i.e. removeGroup if
-//         * already connected. Else, request WifiP2pManager to abort the ongoing
-//         * request
-//         */
-//		if (mManager != null) {
-//			final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
-//					.findFragmentById(R.id.frag_list);
-//			if (fragment.getDevice() == null
-//					|| fragment.getDevice().status == WifiP2pDevice.CONNECTED) {
-//				disconnect();
-//			} else if (fragment.getDevice().status == WifiP2pDevice.AVAILABLE
-//					|| fragment.getDevice().status == WifiP2pDevice.INVITED) {
-//
-//				mManager.cancelConnect(mChannel, new WifiP2pManager.ActionListener() {
-//
-//					@Override
-//					public void onSuccess() {
-//						Toast.makeText(GameLauncher.this, "Aborting connection",
-//								Toast.LENGTH_SHORT).show();
-//					}
-//
-//					@Override
-//					public void onFailure(int reasonCode) {
-//						Toast.makeText(GameLauncher.this,
-//								"Connect abort request failed. Reason Code: " + reasonCode,
-//								Toast.LENGTH_SHORT).show();
-//					}
-//				});
-//			}
-//		}
-//
-//	}
-
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         Toast.makeText(OnlineGameLauncher.this, "Connesso", Toast.LENGTH_LONG).show();
@@ -394,22 +196,11 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Toast.makeText(OnlineGameLauncher.this, "Non Connesso" + connectionResult.toString(), Toast.LENGTH_LONG).show();
 
-//        if (mResolvingConnectionFailure) {
-//            // already resolving
-//            return;
-//        }
-//
-//        // if the sign-in button was clicked or if auto sign-in is enabled,
-//        // launch the sign-in flow
         if (mSignInClicked || mAutoStartSignInFlow) {
             mAutoStartSignInFlow = false;
             mSignInClicked = false;
             mResolvingConnectionFailure = true;
 
-            // Attempt to resolve the connection failure using BaseGameUtils.
-            // The R.string.signin_other_error value should reference a generic
-            // error string in your strings.xml file, such as "There was
-            // an issue with sign-in, please try again later."
             if (!BaseGameUtils.resolveConnectionFailure(this,
                     mGoogleApiClient, connectionResult,
                     RC_SIGN_IN, R.string.signin_other_error)) {
@@ -432,18 +223,6 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
     @Override
     public void onActivityResult(int request, int response, Intent data) {
         System.out.println(request + " " + response);
-//        if (request == RC_SELECT_PLAYERS) {
-//            if (response != Activity.RESULT_OK) {
-//                // user canceled
-//                return;
-//            }
-//
-//            // get the invitee list
-//            Bundle extras = data.getExtras();
-//            final ArrayList<String> invitees =
-//                    data.getStringArrayListExtra(Games.EXTRA_PLAYER_IDS);
-//
-//            // get auto-match criteria
             Bundle autoMatchCriteria = null;
             int minAutoMatchPlayers =
                     data.getIntExtra(Multiplayer.EXTRA_MIN_AUTOMATCH_PLAYERS, 0);
@@ -522,6 +301,8 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
     @Override
     public void onRoomConnected(int statusCode, Room room) {
         Toast.makeText(getApplicationContext() ,"Room Connected", Toast.LENGTH_LONG).show();
+
+        ((OnlineGameFragment) gameFrag).enableStartButton();
 
         if (statusCode != GamesStatusCodes.STATUS_OK) {
             // let screen go to sleep

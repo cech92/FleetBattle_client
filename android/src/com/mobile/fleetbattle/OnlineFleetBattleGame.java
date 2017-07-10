@@ -103,9 +103,15 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
     private int[][] disposizione;
     private boolean[][] avversarioToccato;
     private GoogleApiClient mGoogleApiClient;
+    TextButton button;
 
     public void setTurn(int turn) {
         this.turn = turn;
+    }
+
+    public void enableStartButton() {
+        if (button != null)
+            button.setVisible(true);
     }
 
     public void checkAttack(byte[] b) {
@@ -200,8 +206,7 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
         }
     }
 
-    OnlineFleetBattleGame(com.mobile.fleetbattle.Adversary en){
-        enemy = en;
+    OnlineFleetBattleGame(){
     }
 
     @Override
@@ -248,7 +253,8 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
             ships.add(aux);
         }
 
-        final TextButton button = new TextButton("Start Battle!", skin, "default");
+        button = new TextButton("Start Battle!", skin, "default");
+        button.setVisible(false);
         button.setWidth(820);
         button.setHeight(130);
         button.setPosition(50, 970);

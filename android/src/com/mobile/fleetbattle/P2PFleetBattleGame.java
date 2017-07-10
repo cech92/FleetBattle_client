@@ -1,8 +1,14 @@
 package com.mobile.fleetbattle;
 
-/**
- * Created by cech92 on 09/07/17.
- */
+
+import android.app.Activity;
+import android.app.FragmentManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -23,11 +29,16 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.Future;
 
+import static com.mobile.fleetbattle.R.id.info;
 import static java.lang.Math.abs;
-
-package com.mobile.fleetbattle;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -85,6 +96,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
     private Rectangle target;
     private boolean targetShown = false;
     private Coord targetCo;
+    private int turn = 0;
 
 
     private boolean locked = false;
@@ -122,7 +134,8 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
 
     private int[][] disposizione;
     private boolean[][] avversarioToccato;
-
+    Activity mActivity;
+    DeviceDetailFragment ddf;
 
     private class Coord{
         int x;
@@ -133,8 +146,102 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         }
     }
 
-    P2PFleetBattleGame(com.mobile.fleetbattle.Adversary en){
-        enemy = en;
+    public void setTurn(int turn) {
+        this.turn = turn;
+    }
+
+    public void checkAttack(byte[] b) {
+        int y = (int)b[1];
+        int x = (int)b[2];
+        int hitted;
+        targetCo = new Coord(x, y);
+        if(disposizione[y][x]!=0 && disposizione[y][x]<100) {
+            disposizione[y][x]+=100;
+            hitted = 1;
+            System.out.println("Colpito");
+            secondHit=true;
+            if(lost()){
+                state = 14;
+                gameRunning = false;
+            }else {
+                state = 7;
+            }
+        }
+        else {
+            System.out.println("Non colpito");
+            hitted = 0;
+            secondHit=false;
+            state=1;
+
+            if (camera.position.x < 920 + camera.viewportWidth / 2) {
+                camera.translate(+920, 0, 0);
+            }
+            camera.update();
+        }
+        Ship s = sank(y, x);
+
+        byte[] mMsgBuf = new byte[7];
+        mMsgBuf[0] = (byte)2;
+        mMsgBuf[1] = (byte)hitted;
+        mMsgBuf[2] = lost() ? (byte)1 : (byte)0;
+        if (s.size > 0) {
+            mMsgBuf[3] = (byte)s.x;
+            mMsgBuf[4] = (byte)s.y;
+            mMsgBuf[5] = (byte)s.size;
+            mMsgBuf[6] = (byte)s.up;
+        }
+        else {
+            mMsgBuf[3] = (byte)-1;
+        }
+        System.out.println(s.x + " " + s.y + " " + s.size);
+
+        ddf.sendAttackResponse(mMsgBuf, turn);
+//        for (Participant p : OnlineGameLauncher.mParticipants) {
+//            Games.RealTimeMultiplayer.sendReliableMessage(mGoogleApiClient, null, mMsgBuf,
+//                    OnlineGameLauncher.mRoomId, p.getParticipantId());
+//        }
+    }
+
+    public void responseAttack(byte[] b) {
+        System.out.println("BYTE RICEVUTI: " + (int)b[0]);
+        System.out.println("BYTE RICEVUTI: " + (int)b[1]);
+        System.out.println("BYTE RICEVUTI: " + (int)b[2]);
+        if((int)b[1] == 1){
+            System.out.println("COLPITO");
+            hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+            state = 1;
+//            Ship hitShip = res.sank;
+//            if(hitShip.size!=0){
+//                ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
+//            }
+            if ((int)b[3] != -1) {
+                int x = (int)b[3];
+                int y = (int)b[4];
+                int size = (int)b[5];
+                int up = (int)b[6];
+                ships.add(new Rectangle(x*80+1000, y*80+80, 80+(abs(1-up))*(size-1)*80, 80+up*(size-1)*80));
+            }
+            if((int)b[2] == 1){
+                state = 13;
+                gameRunning=false;
+            }
+        }else {
+            misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+            state=5;
+            System.out.println(camera.position.x);
+            if (camera.position.x > camera.viewportWidth / 2) {
+                camera.translate(-920, 0, 0);
+            }else {
+                wait=0;
+                state=7;
+            }
+            camera.update();
+        }
+    }
+
+    P2PFleetBattleGame(Activity activity){
+        mActivity = activity;
+        ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
     }
 
     @Override
@@ -226,77 +333,92 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         if(state>0){
             //enemy's turn
             if(state==7){
-                if(secondHit && wait<waitingTime/2){
-                    wait++;
-                }else {
-                    Future<Ship> futAttack = enemy.getAttack();
-                    Ship attack;
-                    try {
-                        attack = futAttack.get();
-                    } catch (Exception ex) {
-                        attack = new Ship(0, 0, 0, 0);
-                    }
-                    wait=0;
-                    state=8;
-                    targetCo = new Coord(attack.x, attack.y);
-                }
+//                if(secondHit && wait<waitingTime/2){
+//                    wait++;
+//                }else {
+//                    Future<Ship> futAttack = enemy.getAttack();
+//                    Ship attack;
+//                    try {
+//                        attack = futAttack.get();
+//                    } catch (Exception ex) {
+//                        attack = new Ship(0, 0, 0, 0);
+//                    }
+//                    wait=0;
+//                    state=8;
+//                    targetCo = new Coord(attack.x, attack.y);
+//                }
 
             }
             if(state==9) {
-                int x = targetCo.x;
-                int y = targetCo.y;
-                boolean hit = hit(y,x);
-                boolean lost = lost();
-                Results res = new Results(hit,sank(y,x),lost);
-                enemy.giveResults(res);
-
-                if(hit){
-                    secondHit=true;
-                    hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
-                    if(lost){
-                        messageString ="Click back to exit game.";
-                        state = 14;
-                        gameRunning = false;
-                    }else {
-                        messageString ="Hit! The enemy gets another attack.";
-                        state = 10;
-                    }
-                }else{
-                    messageString = "Miss! It's your turn now.";
-                    secondHit=false;
-                    misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
-                    state=11;
-                }
+//                int x = targetCo.x;
+//                int y = targetCo.y;
+//                boolean hit = hit(y,x);
+//                boolean lost = lost();
+//                Results res = new Results(hit,sank(y,x),lost);
+//                enemy.giveResults(res);
+//
+//                if(hit){
+//                    secondHit=true;
+//                    hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
+//                    if(lost){
+//                        messageString ="Click back to exit game.";
+//                        state = 14;
+//                        gameRunning = false;
+//                    }else {
+//                        messageString ="Hit! The enemy gets another attack.";
+//                        state = 10;
+//                    }
+//                }else{
+//                    messageString = "Miss! It's your turn now.";
+//                    secondHit=false;
+//                    misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
+//                    state=11;
+//                }
 
             }
             // Transitions between turns
             if(state==12) {
-                if(wait<waitingTime){
-                    wait=wait+1;
-                }else {
-                    if (camera.position.x < 920 + camera.viewportWidth / 2) {
-                        camera.translate(+40, 0, 0);
-                    } else {
-                        messageString = "Select a cell to attack";
-                        wait=0;
-                        state=1;
+                if (turn == 1) {
+                    if(wait<waitingTime){
+                        wait=wait+1;
+                    }else {
+                        if (camera.position.x < 920 + camera.viewportWidth / 2) {
+                            camera.translate(+40, 0, 0);
+                        } else {
+                            wait=0;
+                            state=1;
+                        }
+                        camera.update();
                     }
-                    camera.update();
                 }
+                else
+                    state = 7;
+//                if(wait<waitingTime){
+//                    wait=wait+1;
+//                }else {
+//                    if (camera.position.x < 920 + camera.viewportWidth / 2) {
+//                        camera.translate(+40, 0, 0);
+//                    } else {
+//                        messageString = "Select a cell to attack";
+//                        wait=0;
+//                        state=1;
+//                    }
+//                    camera.update();
+//                }
             }
             if(state==6) {
-                if(wait<waitingTime){
-                    wait=wait+1;
-                }else {
-                    if (camera.position.x > camera.viewportWidth / 2) {
-                        camera.translate(-40, 0, 0);
-                    } else {
-                        messageString = "Please wait for the enemy attack.";
-                        wait=0;
-                        state=7;
-                    }
-                    camera.update();
-                }
+//                if(wait<waitingTime){
+//                    wait=wait+1;
+//                }else {
+//                    if (camera.position.x > camera.viewportWidth / 2) {
+//                        camera.translate(-40, 0, 0);
+//                    } else {
+//                        messageString = "Please wait for the enemy attack.";
+//                        wait=0;
+//                        state=7;
+//                    }
+//                    camera.update();
+//                }
             }
 
             //Draw everything
@@ -342,78 +464,78 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
             batch.end();
 
             if(state==2||state==8){
-                if(state==2){
-                    messageString="Please wait for the enemy's response.";
-                }
-                if(!targetShown){
-                    if(state==2){
-                        target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-                    }else{ //state==8
-                        target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-                    }
-                    targetShown=true;
-                }
-                if (target.width > 80) {
-                    target.x=target.x+80;
-                    target.y=target.y+80;
-                    target.width=target.width-160;
-                    target.height=target.height-160;
-                }else{
-
-                    state=state+1;
-
-                }
+//                if(state==2){
+//                    messageString="Please wait for the enemy's response.";
+//                }
+//                if(!targetShown){
+//                    if(state==2){
+//                        target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+//                    }else{ //state==8
+//                        target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+//                    }
+//                    targetShown=true;
+//                }
+//                if (target.width > 80) {
+//                    target.x=target.x+80;
+//                    target.y=target.y+80;
+//                    target.width=target.width-160;
+//                    target.height=target.height-160;
+//                }else{
+//
+//                    state=state+1;
+//
+//                }
             }
             if(state==3){
-                Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
-                Results res;
-                try{
-                    res = futRes.get();
-                }catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);}
-
-                if(res.hit){
-                    hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
-                    Ship hitShip = res.sank;
-                    if(hitShip.size!=0){
-                        ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
-                    }
-                    if(res.lost){
-                        messageString="Click back to exit game.";
-                        state = 13;
-                        gameRunning=false;
-                    }else {
-                        messageString="Hit! You get another attack.";
-                        state = 4;
-                    }
-                }else {
-                    messageString="Miss! It's the enemy's turn now.";
-                    misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
-                    state=5;
-                }
+//                Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
+//                Results res;
+//                try{
+//                    res = futRes.get();
+//                }catch (Exception ex){res= new Results(false,new Ship(0,0,0,0),false);}
+//
+//                if(res.hit){
+//                    hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+//                    Ship hitShip = res.sank;
+//                    if(hitShip.size!=0){
+//                        ships.add(new Rectangle(hitShip.x*80+1000, hitShip.y*80+80, 80+(abs(1-hitShip.up))*(hitShip.size-1)*80, 80+hitShip.up*(hitShip.size-1)*80));
+//                    }
+//                    if(res.lost){
+//                        messageString="Click back to exit game.";
+//                        state = 13;
+//                        gameRunning=false;
+//                    }else {
+//                        messageString="Hit! You get another attack.";
+//                        state = 4;
+//                    }
+//                }else {
+//                    messageString="Miss! It's the enemy's turn now.";
+//                    misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+//                    state=5;
+//                }
             }
             if(state==4||state==5||state==10||state==11) {
-                if (wait < waitingTime / 2) {
-                    wait++;
-                } else {
-                    if (target.width < 1520) {
-                        target.x = target.x - 80;
-                        target.y = target.y - 80;
-                        target.width = target.width + 160;
-                        target.height = target.height + 160;
-                    } else {
-                        targetShown=false;
-                        wait = 0;
-                        if(state==4){
-                            state=1;
-                        }
-                        if(state==10){
-                            state=7;
-                        }
-                        if(state==5||state==11){
-                            state=state+1;
-                        }
-                    }
-                }
+//                if (wait < waitingTime / 2) {
+//                    wait++;
+//                } else {
+//                    if (target.width < 1520) {
+//                        target.x = target.x - 80;
+//                        target.y = target.y - 80;
+//                        target.width = target.width + 160;
+//                        target.height = target.height + 160;
+//                    } else {
+//                        targetShown=false;
+//                        wait = 0;
+//                        if(state==4){
+//                            state=1;
+//                        }
+//                        if(state==10){
+//                            state=7;
+//                        }
+//                        if(state==5||state==11){
+//                            state=state+1;
+//                        }
+//                    }
+//                }
             }
 
 
@@ -642,6 +764,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
             if (1000 < touchPos.x & touchPos.x < 1800 & 80 < touchPos.y & touchPos.y < 880) {
                 Coord co = convertiCoordinate(touchPos.x, touchPos.y);
 
+                sendAttack(co.y, co.x);
                 //NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
                 if (!avversarioToccato[co.y][co.x]) {
                     avversarioToccato[co.y][co.x] = true;
@@ -675,5 +798,20 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
 
     static boolean getRunning(){
         return (gameRunning);
+    }
+
+    public void sendAttack(int y, int x) {
+        byte[] mMsgBuf = new byte[3];
+        mMsgBuf[0] = (byte)1;
+        mMsgBuf[1] = (byte)y;
+        mMsgBuf[2] = (byte)x;
+
+        ddf.sendAttack(mMsgBuf);
+
+//        for (Participant p : OnlineGameLauncher.mParticipants) {
+//            Games.RealTimeMultiplayer.sendReliableMessage(mGoogleApiClient, null, mMsgBuf,
+//                    OnlineGameLauncher.mRoomId, p.getParticipantId());
+//        }
+//        System.out.println("attack send");
     }
 }

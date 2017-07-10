@@ -19,13 +19,9 @@ public class GameFragment extends AndroidFragmentApplication {
     Adversary enemy = null;
 
     public GameFragment() {
-        if (Config.getCurrentGameType() == Config.P2PGAME)
-            enemy = new P2PAdversary();
-        else if (Config.getCurrentGameType() == Config.SINGLEEASYGAME)
+        if (Config.getCurrentGameType() == Config.SINGLEEASYGAME)
             enemy = new FooAdversary();
-        else if (Config.getCurrentGameType() == Config.ONLINEGAME)
-            enemy = new OnlineAdversary();
-        else
+        else if (Config.getCurrentGameType() == Config.SINGLEMEDIUMGAME)
             enemy = new ComputerAdversary();
     }
 
