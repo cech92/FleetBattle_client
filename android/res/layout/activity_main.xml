@@ -6,11 +6,6 @@
               android:paddingRight="16dp"
               android:orientation="vertical" >
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/fleet_battle"/>
-
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,6 +29,11 @@
         android:layout_height="wrap_content"
         android:text="@string/online_adversary"
         android:onClick="startOnlineGame"/>
+
+    <ImageView
+        android:layout_width="fill_parent" android:layout_height="fill_parent"
+        android:layout_marginTop="16dp" android:layout_marginBottom="8dp"
+        android:src="@drawable/logo_unipd" android:adjustViewBounds="true"/>
 </LinearLayout>
 
 

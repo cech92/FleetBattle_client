@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.util.Log;
 
 import java.io.ByteArrayInputStream;
@@ -45,6 +46,7 @@ public class P2PGameService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         Context context = getApplicationContext();
         System.out.println("INTENT: " + intent.getAction());
+        System.out.println("ADDRESS: " + intent.getExtras().getString(EXTRAS_ADDRESS));
         Socket socket = null;
 
         if (intent.getAction().equals(ACTION_LAUNCH_GAME)) {
@@ -93,8 +95,9 @@ public class P2PGameService extends IntentService {
 
         else if (intent.getAction().equals(ACTION_SEND_ATTACK)) {
 //            String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
-            String host = intent.getExtras().getString(EXTRAS_ADDRESS);
-            int port = intent.getExtras().getInt(EXTRAS_PORT);
+            final String host = intent.getExtras().getString(EXTRAS_ADDRESS);
+            final int port = intent.getExtras().getInt(EXTRAS_PORT);
+            OutputStream os = null;
 
             try {
                 Log.d(P2PGameLauncher.TAG, "Opening client socket - ");
@@ -109,21 +112,17 @@ public class P2PGameService extends IntentService {
 
                 System.out.println("2a");
 
-                DataOutputStream stream = new DataOutputStream(socket.getOutputStream());
+                os = socket.getOutputStream();
 
                 System.out.println("3a");
 
-                byte[] b = new byte[1];
-                b[0] = (byte)0;
+                byte[] b = intent.getExtras().getByteArray("bytes");
+                os.write(b);
+                os.flush();
 
                 System.out.println("4a");
 
-                stream.write(b);
-                stream.flush();
-
-                System.out.println("5a");
-
-                stream.close();
+                os.close();
                 socket.close();
                 //OutputStream stream = socket.getOutputStream();
                 //ContentResolver cr = context.getContentResolver();
@@ -146,6 +145,57 @@ public class P2PGameService extends IntentService {
 
         }
 
+        else if (intent.getAction().equals(ACTION_SEND_ATTACK_RESPONSE)) {
+//            String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
+            String host = intent.getExtras().getString(EXTRAS_ADDRESS);
+            int port = intent.getExtras().getInt(EXTRAS_PORT);
+            OutputStream os = null;
+
+            try {
+                Log.d(P2PGameLauncher.TAG, "Opening client socket - ");
+                socket = new Socket(host, port);
+
+//                socket.bind(null);
+//                socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
+
+                System.out.println("1a");
+
+                Log.d(P2PGameLauncher.TAG, "Client socket - " + socket.isConnected());
+
+                System.out.println("2a");
+
+                os = socket.getOutputStream();
+
+                System.out.println("3a");
+
+                byte[] b = intent.getExtras().getByteArray("bytes");
+                os.write(b);
+                os.flush();
+
+                System.out.println("4a");
+
+                os.close();
+                socket.close();
+                //OutputStream stream = socket.getOutputStream();
+                //ContentResolver cr = context.getContentResolver();
+                //DeviceDetailFragment.copyFile(is, stream);
+                Log.d(P2PGameLauncher.TAG, "Client: Data written");
+            } catch (IOException e) {
+                Log.e(P2PGameLauncher.TAG, e.getMessage());
+            } finally {
+                if (socket != null) {
+                    if (socket.isConnected()) {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+                            // Give up
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+        }
 
 
 //        if (intent.getAction().equals(ACTION_SEND_ATTACK_RESPONSE)) {

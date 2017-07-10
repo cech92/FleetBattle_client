@@ -190,6 +190,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
             misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
             state=5;
             System.out.println(camera.position.x);
+            System.out.println(camera.viewportWidth / 2);
             if (camera.position.x > camera.viewportWidth / 2) {
                 camera.translate(-920, 0, 0);
             }else {
@@ -767,7 +768,7 @@ class P2PFleetBattleGame extends ApplicationAdapter implements InputProcessor {
         mMsgBuf[2] = (byte)x;
 
         DeviceDetailFragment ddf = (DeviceDetailFragment) mActivity.getFragmentManager().findFragmentById(R.id.frag_detail);
-        ddf.sendAttack(mMsgBuf);
+        ddf.sendAttack(mMsgBuf, turn);
 
 //        for (Participant p : OnlineGameLauncher.mParticipants) {
 //            Games.RealTimeMultiplayer.sendReliableMessage(mGoogleApiClient, null, mMsgBuf,
