@@ -74,10 +74,11 @@ public class OnlineGameLauncher extends AppCompatActivity implements AndroidFrag
 
         if (Config.getCurrentGameType() == Config.ONLINEGAME) {
             mGoogleApiClient = MainActivity.getMGoogleApiClient();
-
         }
 
-        System.out.println("CLIENT " + mGoogleApiClient.toString());
+        if (!mGoogleApiClient.isConnected())
+            mGoogleApiClient.connect();
+
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         gameFrag = new OnlineGameFragment();

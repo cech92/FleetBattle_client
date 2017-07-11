@@ -245,6 +245,7 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
 
         state = 0;
         Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        font = new BitmapFont(Gdx.files.internal("Roboto-xhdpi.fnt"),Gdx.files.internal("Roboto-xhdpi.png"),false);
 
         disposizione = new int[10][10];
         avversarioToccato = new boolean[10][10];
