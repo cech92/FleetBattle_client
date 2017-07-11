@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
@@ -14,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -38,6 +40,9 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
     private Texture torpImageRot;
     private Texture winImage;
     private Texture loseImage;
+
+    private BitmapFont font;
+    private String messageString = "";
 
     private OrthographicCamera camera;
     private SpriteBatch batch;
@@ -102,31 +107,39 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
     }
 
     public void checkAttack(byte[] b) {
+        //the state is 7
+
         int y = (int)b[1];
         int x = (int)b[2];
         int hitted;
         targetCo = new Coord(x, y);
-        if(!targetShown){
-            target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-            targetShown=true;
-        }
-        if (target != null) {
-            if (target.width > 80) {
-                target.x = target.x + 80;
-                target.y = target.y + 80;
-                target.width = target.width - 160;
-                target.height = target.height - 160;
+        state = 8;
+        while (state==8){
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
         if(disposizione[y][x]!=0 && disposizione[y][x]<100) {
             disposizione[y][x]+=100;
             hitted = 1;
             hits.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
+            messageString ="Hit! The enemy gets another attack.";
             secondHit=true;
             if(lost()){
                 state = 14;
+                messageString="Click back to exit game.";
                 gameRunning = false;
             }else {
+                state = 10;
+                while (state==10){
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 state = 7;
             }
         }
@@ -134,12 +147,15 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
             hitted = 0;
             misses.add(new Rectangle((x * 80) + 80 , (y * 80) + 80, 80, 80));
             secondHit=false;
-            state=1;
-
-            if (camera.position.x < 920 + camera.viewportWidth / 2) {
-                camera.translate(+920, 0, 0);
+            state = 11;
+            while (state==11){
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-            camera.update();
+            state=12;
         }
         Ship s = sank(y, x);
 
@@ -165,8 +181,26 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
     }
 
     public void responseAttack(byte[] b) {
+        // the state is 1
+        state=2;
+        while (state==2){
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         if((int)b[1] == 1){
             hits.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
+            messageString="Hit! You get another attack.";
+            state=4;
+            while (state==4){
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             state = 1;
             if ((int)b[3] != -1) {
                 int x = (int)b[3];
@@ -177,18 +211,20 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
             }
             if((int)b[2] == 1){
                 state = 13;
+                messageString="Click back to exit game.";
                 gameRunning=false;
             }
         }else {
             misses.add(new Rectangle((targetCo.x * 80) + 80 + 920, (targetCo.y * 80) + 80, 80, 80));
             state=5;
-            if (camera.position.x > camera.viewportWidth / 2) {
-                camera.translate(-920, 0, 0);
-            }else {
-                wait=0;
-                state=7;
+            while (state==5){
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-            camera.update();
+            state=6;
         }
     }
 
@@ -262,7 +298,11 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
                     case 0 :
                         computeMatrix();
                         gameRunning=true;
-                        state=12;
+                        if (turn == 1) {
+                            state=12;
+                        }else{
+                            state=6;
+                        }
                         break;
                     case 1 :
                         button.getLabel().setFontScale(2.5f, 2.5f);
@@ -295,7 +335,7 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
         camera.update();
 
         if(state>0){
-            //enemy's turn
+            //enemy's turn now handled with check attack
             if(state==7){
 //                if(secondHit && wait<waitingTime/2){
 //                    wait++;
@@ -342,45 +382,32 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
             }
             // Transitions between turns
             if(state==12) {
-                if (turn == 1) {
-                    if(wait<waitingTime){
-                        wait=wait+1;
-                    }else {
-                        if (camera.position.x < 920 + camera.viewportWidth / 2) {
-                            camera.translate(+40, 0, 0);
-                        } else {
-                            wait=0;
-                            state=1;
-                        }
-                        camera.update();
+                if(wait<waitingTime){
+                    wait=wait+1;
+                }else {
+                    if (camera.position.x < 920 + camera.viewportWidth / 2) {
+                        camera.translate(+40, 0, 0);
+                    } else {
+                        messageString = "Select a cell to attack";
+                        wait=0;
+                        state=1;
                     }
+                    camera.update();
                 }
-                else
-                    state = 7;
-//                if(wait<waitingTime){
-//                    wait=wait+1;
-//                }else {
-//                    if (camera.position.x < 920 + camera.viewportWidth / 2) {
-//                        camera.translate(+40, 0, 0);
-//                    } else {
-//                        wait=0;
-//                        state=1;
-//                    }
-//                    camera.update();
-//                }
             }
             if(state==6) {
-//                if(wait<waitingTime){
-//                    wait=wait+1;
-//                }else {
-//                    if (camera.position.x > camera.viewportWidth / 2) {
-//                        camera.translate(-40, 0, 0);
-//                    } else {
-//                        wait=0;
-//                        state=7;
-//                    }
-//                    camera.update();
-//                }
+                if(wait<waitingTime){
+                    wait=wait+1;
+                }else {
+                    if (camera.position.x > camera.viewportWidth / 2) {
+                        camera.translate(-40, 0, 0);
+                    } else {
+                        messageString = "Please wait for the enemy attack.";
+                        wait=0;
+                        state=7;
+                    }
+                    camera.update();
+                }
             }
 
             //Draw everything
@@ -417,25 +444,33 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
             if(state==13){
                 batch.draw(winImage,1000, 260);
             }
+
+            font.setColor(0,0.2f,1,1);
+            font.getData().setScale(1.3f,1.5f);
+            font.draw(batch, messageString, 30, 1040, 860, Align.center, true);
+            font.draw(batch, messageString, 950, 1040, 860, Align.center, true);
+
             batch.end();
 
             if(state==2||state==8){
-//                if(!targetShown){
-//                    if(state==2){
-//                        target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-//                    }else{ //state==8
-//                        target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
-//                    }
-//                    targetShown=true;
-//                }
-//                if (target.width > 80) {
-//                    target.x=target.x+80;
-//                    target.y=target.y+80;
-//                    target.width=target.width-160;
-//                    target.height=target.height-160;
-//                }else{
-//                    state=state+1;
-//                }
+                if(!targetShown){
+                    if(state==2){
+                        target = new Rectangle((1000 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+                    }else{ //state==8
+                        target = new Rectangle((80 + targetCo.x * 80) - 720, (80 + 80 * targetCo.y) - 720, 1520, 1520);
+                    }
+                    targetShown=true;
+                }
+                if (target.width > 80) {
+                    target.x=target.x+80;
+                    target.y=target.y+80;
+                    target.width=target.width-160;
+                    target.height=target.height-160;
+                }else{
+
+                    state=state+1;
+
+                }
             }
             if(state==3){
 //                Future<Results> futRes = enemy.attack(targetCo.y,targetCo.x);
@@ -465,28 +500,20 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
 //                }
             }
             if(state==4||state==5||state==10||state==11) {
-//                if (wait < waitingTime / 2) {
-//                    wait++;
-//                } else {
-//                    if (target.width < 1520) {
-//                        target.x = target.x - 80;
-//                        target.y = target.y - 80;
-//                        target.width = target.width + 160;
-//                        target.height = target.height + 160;
-//                    } else {
-//                        targetShown=false;
-//                        wait = 0;
-//                        if(state==4){
-//                            state=1;
-//                        }
-//                        if(state==10){
-//                            state=7;
-//                        }
-//                        if(state==5||state==11){
-//                            state=state+1;
-//                        }
-//                    }
-//                }
+                if (wait < waitingTime / 2) {
+                    wait++;
+                } else {
+                    if (target.width < 1520) {
+                        target.x = target.x - 80;
+                        target.y = target.y - 80;
+                        target.width = target.width + 160;
+                        target.height = target.height + 160;
+                    } else {
+                        targetShown=false;
+                        wait = 0;
+                        state=state+100; //correct state change is handled in check attack and response attack methods
+                    }
+                }
             }
 
 
@@ -722,7 +749,6 @@ class OnlineFleetBattleGame extends ApplicationAdapter implements InputProcessor
                 //NOTE! graphics want x,y coordinates while Ship and Adversary want y,x coordinates!
                 if (!avversarioToccato[co.y][co.x]) {
                     avversarioToccato[co.y][co.x] = true;
-                    state=2;
                     targetCo = new Coord(co.x, co.y);
 
                 }
